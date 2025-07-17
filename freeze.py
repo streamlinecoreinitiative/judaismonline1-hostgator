@@ -1,7 +1,10 @@
 from app import app, Course, create_tables
 from flask_frozen import Freezer
 
+import re
+
 app.config['FREEZER_DESTINATION'] = 'docs'
+app.config['FREEZER_IGNORE_URLS'] = [re.compile(r'/admin'), re.compile(r'/login'), re.compile(r'/logout')]
 freezer = Freezer(app)
 
 @freezer.register_generator

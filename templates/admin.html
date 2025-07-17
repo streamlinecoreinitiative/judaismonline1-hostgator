@@ -1,19 +1,25 @@
-<!doctype html>
-<html>
-<head><title>Admin</title></head>
-<body>
+{% extends 'base.html' %}
+{% block content %}
 <h1>Admin</h1>
-<form method="post">
+<form method="post" class="mb-3">
   <input type="hidden" name="action" value="blog">
-  <button type="submit">Generate Daily Blog Post</button>
+  <button class="btn btn-primary" type="submit">Generate Blog Post</button>
 </form>
-<form method="post">
+<form method="post" class="mb-3">
   <input type="hidden" name="action" value="course">
-  Topic: <input type="text" name="topic">
-  Difficulty: <input type="text" name="difficulty" value="Beginner">
-  Prerequisites: <input type="text" name="prerequisites">
-  <button type="submit">Generate Course</button>
+  <div class="mb-1">Topic: <input type="text" name="topic"></div>
+  <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
+  <div class="mb-1">Prerequisites: <input type="text" name="prerequisites"></div>
+  <button class="btn btn-primary" type="submit">Generate Course</button>
 </form>
-<a href="{{ url_for('index') }}">Home</a>
-</body>
-</html>
+<h2>Edit Pages</h2>
+{% for p in pages %}
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="page">
+  <input type="hidden" name="slug" value="{{ p.slug }}">
+  <h3>{{ p.title }}</h3>
+  <textarea name="content" class="form-control" rows="4">{{ p.content }}</textarea>
+  <button class="btn btn-secondary mt-2" type="submit">Save</button>
+</form>
+{% endfor %}
+{% endblock %}

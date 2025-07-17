@@ -2,3 +2,4 @@ Flask
 Flask_SQLAlchemy
 ollama
 Frozen-Flask
+requests

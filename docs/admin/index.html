@@ -1,19 +1,77 @@
 <!doctype html>
 <html>
-<head><title>Admin</title></head>
+<head>
+  <title>Judaism Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+</head>
 <body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">Judaism Online</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="/blog/">Blog</a></li>
+        <li class="nav-item"><a class="nav-link" href="/courses/">Courses</a></li>
+        <li class="nav-item"><a class="nav-link" href="/about/">About</a></li>
+        <li class="nav-item"><a class="nav-link" href="/contact/">Contact</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/news/">News</a></li>
+      </ul>
+      
+        <a class="btn btn-outline-primary" href="/login/">Login</a>
+      
+    </div>
+  </div>
+</nav>
+<div class="container">
+  
 <h1>Admin</h1>
-<form method="post">
+<form method="post" class="mb-3">
   <input type="hidden" name="action" value="blog">
-  <button type="submit">Generate Daily Blog Post</button>
+  <button class="btn btn-primary" type="submit">Generate Blog Post</button>
 </form>
-<form method="post">
+<form method="post" class="mb-3">
   <input type="hidden" name="action" value="course">
-  Topic: <input type="text" name="topic">
-  Difficulty: <input type="text" name="difficulty" value="Beginner">
-  Prerequisites: <input type="text" name="prerequisites">
-  <button type="submit">Generate Course</button>
+  <div class="mb-1">Topic: <input type="text" name="topic"></div>
+  <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
+  <div class="mb-1">Prerequisites: <input type="text" name="prerequisites"></div>
+  <button class="btn btn-primary" type="submit">Generate Course</button>
 </form>
-<a href="/">Home</a>
+<h2>Edit Pages</h2>
+
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="page">
+  <input type="hidden" name="slug" value="landing">
+  <h3>Landing</h3>
+  <textarea name="content" class="form-control" rows="4">Welcome to Judaism Online!</textarea>
+  <button class="btn btn-secondary mt-2" type="submit">Save</button>
+</form>
+
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="page">
+  <input type="hidden" name="slug" value="about">
+  <h3>About</h3>
+  <textarea name="content" class="form-control" rows="4">About us placeholder text.</textarea>
+  <button class="btn btn-secondary mt-2" type="submit">Save</button>
+</form>
+
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="page">
+  <input type="hidden" name="slug" value="contact">
+  <h3>Contact</h3>
+  <textarea name="content" class="form-control" rows="4">Contact information placeholder.</textarea>
+  <button class="btn btn-secondary mt-2" type="submit">Save</button>
+</form>
+
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="page">
+  <input type="hidden" name="slug" value="faq">
+  <h3>Faq</h3>
+  <textarea name="content" class="form-control" rows="4">Frequently asked questions placeholder.</textarea>
+  <button class="btn btn-secondary mt-2" type="submit">Save</button>
+</form>
+
+
+</div>
 </body>
 </html>

@@ -1,8 +1,7 @@
-<!doctype html>
-<html>
-<head><title>Certificate</title></head>
-<body onload="window.print()">
+{% extends 'base.html' %}
+{% block content %}
+<body onload="window.print()" class="p-5">
 <h1>Certificate of Completion</h1>
 <p>Congratulations on completing the course: {{ course.title }}</p>
 </body>
-</html>
+{% endblock %}
