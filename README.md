@@ -58,3 +58,7 @@ A GitHub Actions workflow (`.github/workflows/gh-pages.yml`) automatically
 freezes the site on every push to `main` and publishes the contents of `docs/`
 to the `gh-pages` branch. Enable GitHub Pages for that branch in the repository
 settings so the static site is available at `https://<username>.github.io/<repo>`.
+The freezer now produces **relative URLs** so the site works correctly when
+served from that sub-path. After generating or editing content locally, run
+`python freeze.py` and push the updated `docs/` directory to trigger the
+deployment workflow.
