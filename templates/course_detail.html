@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+<head><title>{{ course.title }}</title></head>
+<body>
+<h1>{{ course.title }}</h1>
+<p><strong>Difficulty:</strong> {{ course.difficulty }}</p>
+<p><strong>Prerequisites:</strong> {{ course.prerequisites }}</p>
+<p>{{ course.description|safe }}</p>
+<a href="{{ url_for('certificate', course_id=course.id) }}">Get Certificate</a><br>
+<a href="{{ url_for('courses') }}">Back to courses</a>
+</body>
+</html>

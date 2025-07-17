@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head><title>Judaism Online</title></head>
+<body>
+<h1>Daily Blog</h1>
+{% for post in posts %}
+  <h2>{{ post.title }}</h2>
+  <p>{{ post.content|safe }}</p>
+  <hr/>
+{% else %}
+  <p>No posts yet.</p>
+{% endfor %}
+<a href="{{ url_for('courses') }}">Courses</a> |
+<a href="{{ url_for('admin') }}">Admin</a>
+</body>
+</html>
