@@ -36,8 +36,8 @@ def generate_text(prompt: str) -> str:
     return "".join(chunk["message"]["content"] for chunk in stream)
 
 
-@app.before_first_request
 def create_tables():
+    """Create database tables if they don't exist."""
     db.create_all()
 
 
@@ -98,4 +98,6 @@ def admin():
 
 
 if __name__ == "__main__":
+    with app.app_context():
+        create_tables()
     app.run(debug=True)
