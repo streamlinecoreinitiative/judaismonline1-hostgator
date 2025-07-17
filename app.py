@@ -128,7 +128,7 @@ def news():
 def login():
     if request.method == "POST":
         password = request.form.get("password")
-        if password == os.environ.get("ADMIN_PASSWORD", "admin"):
+        if password == os.environ.get("ADMIN_PASSWORD", "bere"):
             session["logged_in"] = True
             return redirect(url_for("admin"))
     return render_template("login.html")
