@@ -11,6 +11,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
+
 class BlogPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -25,6 +26,9 @@ class Course(db.Model):
     difficulty = db.Column(db.String(20), nullable=False)
     prerequisites = db.Column(db.Text)
 
+with app.app_context():
+    db.create_all()
+
 
 def generate_text(prompt: str) -> str:
     """Generate text from the local Llama 3 model via ollama."""
@@ -36,9 +40,7 @@ def generate_text(prompt: str) -> str:
     return "".join(chunk["message"]["content"] for chunk in stream)
 
 
-@app.before_first_request
-def create_tables():
-    db.create_all()
+
 
 
 @app.route("/")
