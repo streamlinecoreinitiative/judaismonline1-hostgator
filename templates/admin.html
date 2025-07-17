@@ -5,6 +5,21 @@
   <input type="hidden" name="action" value="blog">
   <button class="btn btn-primary" type="submit">Generate Blog Post</button>
 </form>
+<h2>Blog Posts</h2>
+{% for post in posts %}
+<form method="post" class="mb-2">
+  <input type="hidden" name="action" value="update_blog">
+  <input type="hidden" name="id" value="{{ post.id }}">
+  <input type="text" name="title" class="form-control mb-1" value="{{ post.title }}">
+  <textarea name="content" class="form-control mb-1" rows="3">{{ post.content }}</textarea>
+  <button class="btn btn-secondary me-2" type="submit">Save</button>
+</form>
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="delete_blog">
+  <input type="hidden" name="id" value="{{ post.id }}">
+  <button class="btn btn-danger" type="submit">Delete</button>
+</form>
+{% endfor %}
 <form method="post" class="mb-3">
   <input type="hidden" name="action" value="course">
   <div class="mb-1">Topic: <input type="text" name="topic"></div>
@@ -12,6 +27,39 @@
   <div class="mb-1">Prerequisites: <input type="text" name="prerequisites"></div>
   <button class="btn btn-primary" type="submit">Generate Course</button>
 </form>
+<h2>Courses</h2>
+{% for c in courses %}
+<form method="post" class="mb-2">
+  <input type="hidden" name="action" value="update_course">
+  <input type="hidden" name="id" value="{{ c.id }}">
+  <input type="text" name="title" class="form-control mb-1" value="{{ c.title }}">
+  <textarea name="description" class="form-control mb-1" rows="3">{{ c.description }}</textarea>
+  <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="{{ c.difficulty }}"></div>
+  <div class="mb-1">Prerequisites: <input type="text" name="prerequisites" value="{{ c.prerequisites }}"></div>
+  <button class="btn btn-secondary me-2" type="submit">Save</button>
+</form>
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="delete_course">
+  <input type="hidden" name="id" value="{{ c.id }}">
+  <button class="btn btn-danger" type="submit">Delete</button>
+</form>
+{% endfor %}
+<h2>News Items</h2>
+{% for n in items %}
+<form method="post" class="mb-2">
+  <input type="hidden" name="action" value="update_news">
+  <input type="hidden" name="id" value="{{ n.id }}">
+  <input type="text" name="title" class="form-control mb-1" value="{{ n.title }}">
+  <input type="text" name="url" class="form-control mb-1" value="{{ n.url }}">
+  <textarea name="summary" class="form-control mb-1" rows="2">{{ n.summary }}</textarea>
+  <button class="btn btn-secondary me-2" type="submit">Save</button>
+</form>
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="delete_news">
+  <input type="hidden" name="id" value="{{ n.id }}">
+  <button class="btn btn-danger" type="submit">Delete</button>
+</form>
+{% endfor %}
 <h2>Edit Pages</h2>
 {% for p in pages %}
 <form method="post" class="mb-4">
