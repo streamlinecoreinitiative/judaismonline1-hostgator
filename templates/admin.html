@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head><title>Admin</title></head>
+<body>
+<h1>Admin</h1>
+<form method="post">
+  <input type="hidden" name="action" value="blog">
+  <button type="submit">Generate Daily Blog Post</button>
+</form>
+<form method="post">
+  <input type="hidden" name="action" value="course">
+  Topic: <input type="text" name="topic">
+  Difficulty: <input type="text" name="difficulty" value="Beginner">
+  Prerequisites: <input type="text" name="prerequisites">
+  <button type="submit">Generate Course</button>
+</form>
+<a href="{{ url_for('index') }}">Home</a>
+</body>
+</html>

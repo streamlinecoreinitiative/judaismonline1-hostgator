@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<head><title>Courses</title></head>
+<body>
+<h1>Courses</h1>
+<ul>
+{% for course in courses %}
+  <li><a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.title }}</a> ({{ course.difficulty }})</li>
+{% else %}
+  <li>No courses yet.</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('index') }}">Home</a>
+</body>
+</html>
