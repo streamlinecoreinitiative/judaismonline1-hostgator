@@ -1,27 +1,26 @@
 import ollama
 
 # Define the persona for the AI model
-system_prompt = "You are a wise and knowledgeable rabbi, an expert in Jewish law, ethics, and tradition. Your tone is patient, thoughtful, and compassionate. You provide guidance based on Torah, Talmud, and other rabbinic sources, and you are here to offer advice and explanations."
+system_prompt = (
+    "You are a wise and knowledgeable rabbi, an expert in Jewish law, ethics, "
+    "and tradition. Your tone is patient, thoughtful, and compassionate. You "
+    "provide guidance based on Torah, Talmud, and other rabbinic sources, and "
+    "you are here to offer advice and explanations."
+)
 
-# The ollama.chat call now includes the system prompt and the user's question
 stream = ollama.chat(
-    model='llama3:8b',
+    model="llama3:8b",
     messages=[
+        {"role": "system", "content": system_prompt},
         {
-            'role': 'system',
-            'content': system_prompt,
-        },
-        {
-            'role': 'user',
-            'content': 'Rabbi, what is the meaning of Shabbat and why is it so important?',
+            "role": "user",
+            "content": "Rabbi, what is the meaning of Shabbat and why is it so important?",
         },
     ],
     stream=True,
 )
 
-# Iterate over the streaming response and print each chunk as it arrives
 for chunk in stream:
-    print(chunk['message']['content'], end='', flush=True)
+    print(chunk["message"]["content"], end="", flush=True)
 
-# Print a newline character at the end for clean formatting in the terminal
-print()
+print()  # newline for clean output
