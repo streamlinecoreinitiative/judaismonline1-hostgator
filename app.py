@@ -12,6 +12,8 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 import ollama
+import random
+import requests
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -63,6 +65,35 @@ def generate_text(prompt: str) -> str:
         stream=True,
     )
     return "".join(chunk["message"]["content"] for chunk in stream)
+
+
+NEWS_API_URL = "https://www.jta.org/wp-json/wp/v2/posts?per_page=5"
+
+
+def generate_blog_content() -> str:
+    """Create blog content using a random news topic when available."""
+    topic = None
+    try:
+        resp = requests.get(NEWS_API_URL, timeout=10)
+        resp.raise_for_status()
+        items = resp.json()
+        if items:
+            topic = random.choice(items).get("title", {}).get("rendered")
+    except Exception:
+        topic = None
+
+    date = datetime.datetime.utcnow().strftime("%B %d, %Y")
+    if topic:
+        prompt = (
+            f"Write a short blog post about Judaism inspired by this news topic: {topic}. "
+            f"Include today's date ({date}) in the text and do not mention the day of the week."
+        )
+    else:
+        prompt = (
+            f"Write a short blog post about an aspect of Judaism. "
+            f"Include today's date ({date}) in the text and do not mention the day of the week."
+        )
+    return generate_text(prompt)
 
 
 def create_tables():
@@ -158,11 +189,19 @@ def admin():
     if request.method == "POST":
         action = request.form.get("action")
         if action == "blog":
-            prompt = "Write a short daily blog post about Judaism."
-            content = generate_text(prompt)
+            content = generate_blog_content()
             title = content.split("\n")[0].strip()
             post = BlogPost(title=title, content=content)
             db.session.add(post)
+            db.session.commit()
+        elif action == "update_blog":
+            post = BlogPost.query.get_or_404(request.form.get("id"))
+            post.title = request.form.get("title")
+            post.content = request.form.get("content")
+            db.session.commit()
+        elif action == "delete_blog":
+            post = BlogPost.query.get_or_404(request.form.get("id"))
+            db.session.delete(post)
             db.session.commit()
         elif action == "course":
             topic = request.form.get("topic", "Judaism")
@@ -181,6 +220,27 @@ def admin():
             )
             db.session.add(course)
             db.session.commit()
+        elif action == "update_course":
+            course = Course.query.get_or_404(request.form.get("id"))
+            course.title = request.form.get("title")
+            course.description = request.form.get("description")
+            course.difficulty = request.form.get("difficulty")
+            course.prerequisites = request.form.get("prerequisites")
+            db.session.commit()
+        elif action == "delete_course":
+            course = Course.query.get_or_404(request.form.get("id"))
+            db.session.delete(course)
+            db.session.commit()
+        elif action == "update_news":
+            item = NewsItem.query.get_or_404(request.form.get("id"))
+            item.title = request.form.get("title")
+            item.url = request.form.get("url")
+            item.summary = request.form.get("summary")
+            db.session.commit()
+        elif action == "delete_news":
+            item = NewsItem.query.get_or_404(request.form.get("id"))
+            db.session.delete(item)
+            db.session.commit()
         elif action == "page":
             slug = request.form.get("slug")
             content = request.form.get("content", "")
@@ -190,7 +250,10 @@ def admin():
                 db.session.commit()
         return redirect(url_for("admin"))
     pages = Page.query.all()
-    return render_template("admin.html", pages=pages)
+    posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
+    courses = Course.query.all()
+    items = NewsItem.query.all()
+    return render_template("admin.html", pages=pages, posts=posts, courses=courses, items=items)
 
 
 if __name__ == "__main__":
