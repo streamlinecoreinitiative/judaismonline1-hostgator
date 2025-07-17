@@ -26,7 +26,9 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
    python daily_post.py
    ```
 
-The application uses a SQLite database (`site.db`) created automatically on first run.
+The application uses a SQLite database (`site.db`) created automatically on first run.  
+Open `http://127.0.0.1:5000/admin/` while the app is running to generate blog posts or
+courses via the simple admin interface.
 
 ## Deployment to GitHub Pages
 
@@ -36,7 +38,21 @@ You can generate a static version of the site using Frozen-Flask:
 python freeze.py
 ```
 
-The static files are placed in the `docs/` directory. A GitHub Actions
-workflow (`.github/workflows/gh-pages.yml`) is provided to automatically
-freeze the site and publish it to the `gh-pages` branch so it can be served
-with GitHub Pages. Enable Pages for that branch in your repository settings.
+The script initializes the database tables if needed and then writes the
+generated HTML to the `docs/` directory.
+
+After adding or updating content through the admin page, run `python freeze.py`
+again so the static files reflect the latest posts and courses. Commit the
+`docs/` directory and push the changes to `main`:
+
+```bash
+git add docs
+git commit -m "Update static site"
+git push
+```
+
+A GitHub Actions workflow (`.github/workflows/gh-pages.yml`) automatically
+freezes the site on every push to `main` and publishes the contents of `docs/`
+to the `gh-pages` branch. Enable GitHub Pages for that branch in your repository
+settings (set the source to the `gh-pages` branch) so the static site is
+available at `https://<username>.github.io/<repo>/`.

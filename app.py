@@ -47,25 +47,25 @@ def index():
     return render_template("index.html", posts=posts)
 
 
-@app.route("/courses")
+@app.route("/courses/")
 def courses():
     courses = Course.query.all()
     return render_template("courses.html", courses=courses)
 
 
-@app.route("/courses/<int:course_id>")
+@app.route("/courses/<int:course_id>/")
 def course_detail(course_id):
     course = Course.query.get_or_404(course_id)
     return render_template("course_detail.html", course=course)
 
 
-@app.route("/certificate/<int:course_id>")
+@app.route("/certificate/<int:course_id>/")
 def certificate(course_id):
     course = Course.query.get_or_404(course_id)
     return render_template("certificate.html", course=course)
 
 
-@app.route("/admin", methods=["GET", "POST"])
+@app.route("/admin/", methods=["GET", "POST"])
 def admin():
     if request.method == "POST":
         action = request.form.get("action")

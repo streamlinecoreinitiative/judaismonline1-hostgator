@@ -1,7 +1,8 @@
-from app import app, Course
+from app import app, Course, create_tables
 from flask_frozen import Freezer
 
 app.config['FREEZER_DESTINATION'] = 'docs'
+app.config['FREEZER_RELATIVE_URLS'] = True
 freezer = Freezer(app)
 
 @freezer.register_generator
@@ -15,4 +16,6 @@ def certificate():
         yield {'course_id': course.id}
 
 if __name__ == '__main__':
+    with app.app_context():
+        create_tables()
     freezer.freeze()
