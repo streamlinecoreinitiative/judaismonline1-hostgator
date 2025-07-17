@@ -1,7 +1,5 @@
-<!doctype html>
-<html>
-<head><title>Courses</title></head>
-<body>
+{% extends 'base.html' %}
+{% block content %}
 <h1>Courses</h1>
 <ul>
 {% for course in courses %}
@@ -10,6 +8,4 @@
   <li>No courses yet.</li>
 {% endfor %}
 </ul>
-<a href="{{ url_for('index') }}">Home</a>
-</body>
-</html>
+{% endblock %}
