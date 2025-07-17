@@ -36,7 +36,10 @@ You can generate a static version of the site using Frozen-Flask:
 python freeze.py
 ```
 
-The static files are placed in the `docs/` directory. A GitHub Actions
-workflow (`.github/workflows/gh-pages.yml`) is provided to automatically
-freeze the site and publish it to the `gh-pages` branch so it can be served
-with GitHub Pages. Enable Pages for that branch in your repository settings.
+The script initializes the database tables if needed and then writes the
+generated HTML to the `docs/` directory.
+
+A GitHub Actions workflow (`.github/workflows/gh-pages.yml`) automatically
+freezes the site on every push to `main` and publishes the contents of `docs/`
+to the `gh-pages` branch. Enable GitHub Pages for that branch in the repository
+settings so the static site is available at `https://<username>.github.io/<repo>`.
