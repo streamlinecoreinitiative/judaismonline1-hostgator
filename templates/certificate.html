@@ -1,7 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
+{% if name %}
 <body onload="window.print()" class="p-5">
 <h1>Certificate of Completion</h1>
-<p>Congratulations on completing the course: {{ course.title }}</p>
+<p>Congratulations {{ name }} on completing the course: {{ course.title }}</p>
+<h2 class="mt-4">Course Sections</h2>
+<ul>
+  {% for s in sections %}
+  <li>{{ s.title }}</li>
+  {% endfor %}
+</ul>
 </body>
+{% else %}
+<form method="post">
+  <div class="mb-3">
+    <label for="name" class="form-label">Your Name</label>
+    <input class="form-control" id="name" name="name" placeholder="Your name">
+  </div>
+  <button class="btn btn-primary" type="submit">Generate Certificate</button>
+</form>
+{% endif %}
 {% endblock %}
