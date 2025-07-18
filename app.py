@@ -42,6 +42,18 @@ class Course(db.Model):
     icon = db.Column(db.String(200))
 
 
+class CourseSection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    question = db.Column(db.Text)
+    answer = db.Column(db.String(200))
+    order = db.Column(db.Integer)
+
+    course = db.relationship("Course", backref=db.backref("sections", order_by="CourseSection.order"))
+
+
 class Page(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(50), unique=True, nullable=False)
@@ -109,6 +121,30 @@ def generate_blog_post() -> tuple[str, str]:
     title = lines[0].strip()
     content = lines[1].strip() if len(lines) > 1 else ""
     return title, content
+
+
+def generate_course_sections(topic: str, count: int = 3):
+    """Return a list of section dicts with title, content, question and answer."""
+    prompt = (
+        f"Create {count} sections for a course about {topic}. "
+        "For each section provide a title, detailed HTML content, one short multiple choice question with options A, B and C, and the correct answer letter. "
+        "Respond in JSON with a list of objects having 'title', 'content', 'question' and 'answer'."
+    )
+    import json
+    try:
+        data = json.loads(generate_text(prompt))
+    except Exception:
+        return []
+    sections = []
+    for i, item in enumerate(data, 1):
+        sections.append({
+            "title": item.get("title", f"Section {i}"),
+            "content": item.get("content", ""),
+            "question": item.get("question", ""),
+            "answer": item.get("answer", "").strip(),
+            "order": i,
+        })
+    return sections
 
 
 def fetch_news_items() -> None:
@@ -210,13 +246,50 @@ def logout():
 @app.route("/courses/<int:course_id>/")
 def course_detail(course_id):
     course = Course.query.get_or_404(course_id)
-    return render_template("course_detail.html", course=course)
+    sections = (
+        CourseSection.query.filter_by(course_id=course_id)
+        .order_by(CourseSection.order)
+        .all()
+    )
+    completed = session.get("completed_sections", {}).get(str(course_id), [])
+    all_done = sections and all(s.id in completed for s in sections)
+    return render_template(
+        "course_detail.html",
+        course=course,
+        sections=sections,
+        completed=completed,
+        all_done=all_done,
+    )
 
 
 @app.route("/certificate/<int:course_id>/")
 def certificate(course_id):
     course = Course.query.get_or_404(course_id)
+    sections = CourseSection.query.filter_by(course_id=course_id).all()
+    completed = session.get("completed_sections", {}).get(str(course_id), [])
+    if sections and not all(s.id in completed for s in sections):
+        abort(403)
     return render_template("certificate.html", course=course)
+
+
+@app.route("/courses/<int:course_id>/section/<int:section_id>/", methods=["GET", "POST"])
+def course_section(course_id, section_id):
+    course = Course.query.get_or_404(course_id)
+    section = CourseSection.query.get_or_404(section_id)
+    completed = session.get("completed_sections", {}).get(str(course_id), [])
+    if request.method == "POST":
+        answer = request.form.get("answer", "").strip().lower()
+        if answer == section.answer.strip().lower():
+            completed.append(section_id)
+            session.setdefault("completed_sections", {})[str(course_id)] = completed
+            session.modified = True
+            return redirect(url_for("course_detail", course_id=course_id))
+    return render_template(
+        "course_section.html",
+        course=course,
+        section=section,
+        completed=section_id in completed,
+    )
 
 
 @app.route("/admin/", methods=["GET", "POST"])
@@ -263,6 +336,18 @@ def admin():
                 icon=icon_name,
             )
             db.session.add(course)
+            db.session.commit()
+            # Generate sections using the AI and store them
+            for sec in generate_course_sections(topic):
+                section = CourseSection(
+                    course_id=course.id,
+                    title=sec["title"],
+                    content=sec["content"],
+                    question=sec["question"],
+                    answer=sec["answer"],
+                    order=sec["order"],
+                )
+                db.session.add(section)
             db.session.commit()
         elif action == "update_course":
             course = Course.query.get_or_404(request.form.get("id"))

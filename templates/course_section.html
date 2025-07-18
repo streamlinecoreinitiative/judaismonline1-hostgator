@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-4">
+  <h1>{{ section.title }}</h1>
+  <div class="mb-3">{{ section.content|safe }}</div>
+  {% if completed %}
+  <p class="alert alert-success">Section completed.</p>
+  <a class="btn btn-secondary" href="{{ url_for('course_detail', course_id=course.id) }}">Back to Course</a>
+  {% else %}
+  <form method="post">
+    <p>{{ section.question }}</p>
+    <input class="form-control mb-2" type="text" name="answer" placeholder="Your answer">
+    <button class="btn btn-primary" type="submit">Submit</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

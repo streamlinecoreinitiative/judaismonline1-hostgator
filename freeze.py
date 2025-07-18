@@ -1,4 +1,4 @@
-from app import app, Course, create_tables
+from app import app, Course, CourseSection, create_tables
 from flask_frozen import Freezer
 
 import re
@@ -22,6 +22,12 @@ def course_detail():
 def certificate():
     for course in Course.query.all():
         yield {'course_id': course.id}
+
+
+@freezer.register_generator
+def course_section():
+    for section in CourseSection.query.all():
+        yield {'course_id': section.course_id, 'section_id': section.id}
 
 if __name__ == '__main__':
     with app.app_context():
