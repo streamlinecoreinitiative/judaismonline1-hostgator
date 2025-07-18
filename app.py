@@ -15,7 +15,7 @@ import ollama
 import random
 import requests
 from werkzeug.utils import secure_filename
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -133,7 +133,8 @@ def create_tables():
     inspector = inspect(db.engine)
     cols = [c['name'] for c in inspector.get_columns('course')]
     if 'icon' not in cols:
-        db.engine.execute('ALTER TABLE course ADD COLUMN icon VARCHAR(200)')
+        with db.engine.begin() as conn:
+            conn.execute(text('ALTER TABLE course ADD COLUMN icon VARCHAR(200)'))
     # Initialize default editable pages
     default_pages = {
         "landing": "Welcome to Judaism Online!",
