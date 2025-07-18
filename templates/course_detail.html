@@ -10,7 +10,7 @@
     <h1 class="card-title">{{ course.title }}</h1>
     <p class="card-text"><strong>Difficulty:</strong> {{ course.difficulty }}</p>
     <p class="card-text"><strong>Prerequisites:</strong> {{ course.prerequisites }}</p>
-    <p class="card-text">{{ course.description|safe }}</p>
+    <p class="card-text">{{ course.description|markdown|safe }}</p>
     {% if sections %}
     <h3>Sections</h3>
     <ul class="list-group">

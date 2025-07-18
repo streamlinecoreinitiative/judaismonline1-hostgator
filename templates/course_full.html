@@ -2,7 +2,7 @@
 {% block content %}
 <div class="mb-4">
   <h1>{{ course.title }}</h1>
-  <div class="mb-3">{{ course.description|safe }}</div>
+  <div class="mb-3">{{ course.description|markdown|safe }}</div>
   <h2 class="mt-4">Course Content</h2>
   <div class="accordion" id="sections">
   {% for s in sections %}
@@ -14,7 +14,7 @@
       </h2>
       <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#sections">
         <div class="accordion-body">
-          {{ s.content|safe }}
+          {{ s.content|markdown|safe }}
           {% if s.question %}
           <p class="fw-bold mt-3">{{ s.question }}</p>
           <p class="text-muted">Correct answer: {{ s.answer }}</p>
