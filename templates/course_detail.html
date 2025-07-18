@@ -1,8 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>{{ course.title }}</h1>
-<p><strong>Difficulty:</strong> {{ course.difficulty }}</p>
-<p><strong>Prerequisites:</strong> {{ course.prerequisites }}</p>
-<p>{{ course.description|safe }}</p>
-<a href="{{ url_for('certificate', course_id=course.id) }}">Get Certificate</a>
+<div class="card mb-4">
+  <img src="https://placehold.co/600x300?text=Course" class="card-img-top" alt="Course image">
+  <div class="card-body">
+    <h1 class="card-title">{{ course.title }}</h1>
+    <p class="card-text"><strong>Difficulty:</strong> {{ course.difficulty }}</p>
+    <p class="card-text"><strong>Prerequisites:</strong> {{ course.prerequisites }}</p>
+    <p class="card-text">{{ course.description|safe }}</p>
+    <a class="btn btn-success" href="{{ url_for('certificate', course_id=course.id) }}">Get Certificate</a>
+  </div>
+</div>
 {% endblock %}

@@ -67,7 +67,11 @@ def generate_text(prompt: str) -> str:
     return "".join(chunk["message"]["content"] for chunk in stream)
 
 
-NEWS_API_URL = "https://www.jta.org/wp-json/wp/v2/posts?per_page=5"
+# Only fetch posts from the "Religion" category to keep blog topics focused on
+# religious news.
+NEWS_API_URL = (
+    "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
+)
 
 
 def generate_blog_post() -> tuple[str, str]:

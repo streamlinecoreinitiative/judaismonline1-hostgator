@@ -1,7 +1,10 @@
 import requests
 from app import db, NewsItem
 
-API_URL = "https://www.jta.org/wp-json/wp/v2/posts?per_page=5"
+# Restrict to the Religion category so only faith-related news is stored.
+API_URL = (
+    "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
+)
 
 def fetch_news():
     resp = requests.get(API_URL, timeout=10)
@@ -15,4 +18,7 @@ def fetch_news():
     db.session.commit()
 
 if __name__ == "__main__":
-    fetch_news()
+    # Use an application context so SQLAlchemy can access the database
+    from app import app
+    with app.app_context():
+        fetch_news()
