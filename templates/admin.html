@@ -25,6 +25,10 @@
   <div class="mb-1">Topic: <input type="text" name="topic"></div>
   <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
   <div class="mb-1">Prerequisites: <input type="text" name="prerequisites"></div>
+  <div class="mb-1">
+    Description:
+    <textarea name="description" id="new_description" class="form-control" rows="4"></textarea>
+  </div>
   <button class="btn btn-primary" type="submit">Generate Course</button>
 </form>
 <h2>Courses</h2>
@@ -70,4 +74,11 @@
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
 {% endfor %}
+<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+<script>
+  CKEDITOR.replace('new_description');
+  document.querySelectorAll('textarea[name="description"]').forEach(function(el){
+    if (el.id !== 'new_description') { CKEDITOR.replace(el); }
+  });
+</script>
 {% endblock %}

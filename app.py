@@ -216,11 +216,13 @@ def admin():
             topic = request.form.get("topic", "Judaism")
             difficulty = request.form.get("difficulty", "Beginner")
             prerequisites = request.form.get("prerequisites", "")
-            prompt = (
-                f"Create a concise course outline on {topic} for those interested in converting to Judaism. "
-                f"Focus on key concepts and steps."
-            )
-            description = generate_text(prompt)
+            description = request.form.get("description", "").strip()
+            if not description:
+                prompt = (
+                    f"Create a detailed, comprehensive course on {topic} for those interested in converting to Judaism. "
+                    f"Provide extensive explanations, historical context and practical guidance in HTML format so it can be displayed on a web page."
+                )
+                description = generate_text(prompt)
             course = Course(
                 title=topic,
                 description=description,
