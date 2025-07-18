@@ -10,6 +10,8 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - Courses include difficulty levels and prerequisites.
 - Printable certificate page after completing a course.
 - News section populated from the JTA API (`update_news.py`).
+- Optional `update_site.py` script automates creating posts, freezing the site
+  and pushing updates to GitHub.
 
 ## Setup
 
@@ -29,6 +31,10 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 5. (Optional) Fetch the latest news items:
    ```bash
    python update_news.py
+   ```
+6. (Optional) Automatically create posts, freeze the site and push updates:
+   ```bash
+   python update_site.py
    ```
 
 The application uses a SQLite database (`site.db`) created automatically on first run.
@@ -62,3 +68,10 @@ The freezer now produces **relative URLs** so the site works correctly when
 served from that sub-path. After generating or editing content locally, run
 `python freeze.py` and push the updated `docs/` directory to trigger the
 deployment workflow.
+
+`update_site.py` provides a simple way to automate this process locally. It
+creates new posts, freezes the site and pushes the result in a single command.
+
+Other static hosting platforms such as Netlify or Vercel can be used if you
+prefer. Any service capable of serving the generated `docs/` directory will
+work.
