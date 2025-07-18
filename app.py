@@ -70,8 +70,8 @@ def generate_text(prompt: str) -> str:
 NEWS_API_URL = "https://www.jta.org/wp-json/wp/v2/posts?per_page=5"
 
 
-def generate_blog_content() -> str:
-    """Create blog content using a random news topic when available."""
+def generate_blog_post() -> tuple[str, str]:
+    """Create a blog post and return a `(title, content)` tuple."""
     topic = None
     try:
         resp = requests.get(NEWS_API_URL, timeout=10)
@@ -86,14 +86,20 @@ def generate_blog_content() -> str:
     if topic:
         prompt = (
             f"Write a short blog post about Judaism inspired by this news topic: {topic}. "
-            f"Include today's date ({date}) in the text and do not mention the day of the week."
+            f"Include today's date ({date}) in the text and do not mention the day of the week. "
+            "Start with a concise title summarizing the post on the first line, followed by a blank line and then the body."
         )
     else:
         prompt = (
             f"Write a short blog post about an aspect of Judaism. "
-            f"Include today's date ({date}) in the text and do not mention the day of the week."
+            f"Include today's date ({date}) in the text and do not mention the day of the week. "
+            "Start with a concise title summarizing the post on the first line, followed by a blank line and then the body."
         )
-    return generate_text(prompt)
+    response = generate_text(prompt).strip()
+    lines = response.split("\n", 1)
+    title = lines[0].strip()
+    content = lines[1].strip() if len(lines) > 1 else ""
+    return title, content
 
 
 def create_tables():
@@ -189,8 +195,7 @@ def admin():
     if request.method == "POST":
         action = request.form.get("action")
         if action == "blog":
-            content = generate_blog_content()
-            title = content.split("\n")[0].strip()
+            title, content = generate_blog_post()
             post = BlogPost(title=title, content=content)
             db.session.add(post)
             db.session.commit()
