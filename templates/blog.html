@@ -5,7 +5,7 @@
   <div class="mb-4">
     <h2>{{ post.title }}</h2>
     <p class="text-muted">{{ post.created_at.strftime('%B %d, %Y') }}</p>
-    <p>{{ post.content|safe }}</p>
+    <p>{{ post.content|markdown|safe }}</p>
   </div>
 {% else %}
   <p>No posts yet.</p>

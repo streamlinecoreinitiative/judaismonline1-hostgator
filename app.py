@@ -12,6 +12,7 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 import ollama
+from markdown import markdown
 import random
 import requests
 from werkzeug.utils import secure_filename
@@ -23,6 +24,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.secret_key = os.environ.get('SECRET_KEY', 'secret')
 db = SQLAlchemy(app)
+
+
+# Markdown filter to render AI-generated text nicely
+@app.template_filter('markdown')
+def markdown_filter(text: str) -> str:
+    """Convert Markdown text to HTML."""
+    return markdown(text or '')
 
 
 class BlogPost(db.Model):
