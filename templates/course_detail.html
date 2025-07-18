@@ -29,7 +29,6 @@
     {% if all_done %}
     <a class="btn btn-success mt-3" href="{{ url_for('certificate', course_id=course.id) }}">Get Certificate</a>
     {% endif %}
-    <a class="btn btn-outline-secondary mt-3" href="{{ url_for('course_full', course_id=course.id) }}">View Full Course</a>
   </div>
 </div>
 {% endblock %}

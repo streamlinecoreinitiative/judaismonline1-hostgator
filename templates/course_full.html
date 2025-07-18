@@ -3,7 +3,6 @@
 <div class="mb-4">
   <h1>{{ course.title }}</h1>
   <div class="mb-3">{{ course.description|markdown|safe }}</div>
-  <h2 class="mt-4">Course Content</h2>
   <div class="accordion" id="sections">
   {% for s in sections %}
     <div class="accordion-item">

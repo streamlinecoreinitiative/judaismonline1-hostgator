@@ -270,14 +270,23 @@ def course_detail(course_id):
     )
 
 
-@app.route("/certificate/<int:course_id>/")
+@app.route("/certificate/<int:course_id>/", methods=["GET", "POST"])
 def certificate(course_id):
     course = Course.query.get_or_404(course_id)
-    sections = CourseSection.query.filter_by(course_id=course_id).all()
+    sections = (
+        CourseSection.query.filter_by(course_id=course_id)
+        .order_by(CourseSection.order)
+        .all()
+    )
     completed = session.get("completed_sections", {}).get(str(course_id), [])
     if sections and not all(s.id in completed for s in sections):
         abort(403)
-    return render_template("certificate.html", course=course)
+    name = None
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+    return render_template(
+        "certificate.html", course=course, sections=sections, name=name
+    )
 
 
 @app.route("/courses/<int:course_id>/full/")
