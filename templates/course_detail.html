@@ -11,7 +11,24 @@
     <p class="card-text"><strong>Difficulty:</strong> {{ course.difficulty }}</p>
     <p class="card-text"><strong>Prerequisites:</strong> {{ course.prerequisites }}</p>
     <p class="card-text">{{ course.description|safe }}</p>
-    <a class="btn btn-success" href="{{ url_for('certificate', course_id=course.id) }}">Get Certificate</a>
+    {% if sections %}
+    <h3>Sections</h3>
+    <ul class="list-group">
+      {% for s in sections %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{ loop.index }}. {{ s.title }}</span>
+        {% if s.id in completed %}
+          <span class="badge bg-success">Completed</span>
+        {% else %}
+          <a class="btn btn-sm btn-primary" href="{{ url_for('course_section', course_id=course.id, section_id=s.id) }}">Start</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if all_done %}
+    <a class="btn btn-success mt-3" href="{{ url_for('certificate', course_id=course.id) }}">Get Certificate</a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
