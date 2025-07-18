@@ -11,7 +11,7 @@
   <input type="hidden" name="action" value="update_blog">
   <input type="hidden" name="id" value="{{ post.id }}">
   <input type="text" name="title" class="form-control mb-1" value="{{ post.title }}">
-  <textarea name="content" class="form-control mb-1" rows="3">{{ post.content }}</textarea>
+  <textarea name="content" class="form-control mb-1 blog-content" rows="3">{{ post.content }}</textarea>
   <button class="btn btn-secondary me-2" type="submit">Save</button>
 </form>
 <form method="post" class="mb-4">
@@ -20,7 +20,7 @@
   <button class="btn btn-danger" type="submit">Delete</button>
 </form>
 {% endfor %}
-<form method="post" class="mb-3">
+<form method="post" enctype="multipart/form-data" class="mb-3">
   <input type="hidden" name="action" value="course">
   <div class="mb-1">Topic: <input type="text" name="topic"></div>
   <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
@@ -29,17 +29,23 @@
     Description:
     <textarea name="description" id="new_description" class="form-control" rows="4"></textarea>
   </div>
+  <div class="mb-1">Icon: <input type="file" name="icon"></div>
   <button class="btn btn-primary" type="submit">Generate Course</button>
 </form>
 <h2>Courses</h2>
 {% for c in courses %}
-<form method="post" class="mb-2">
+<form method="post" enctype="multipart/form-data" class="mb-2">
   <input type="hidden" name="action" value="update_course">
   <input type="hidden" name="id" value="{{ c.id }}">
   <input type="text" name="title" class="form-control mb-1" value="{{ c.title }}">
   <textarea name="description" class="form-control mb-1" rows="3">{{ c.description }}</textarea>
   <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="{{ c.difficulty }}"></div>
   <div class="mb-1">Prerequisites: <input type="text" name="prerequisites" value="{{ c.prerequisites }}"></div>
+  <div class="mb-1">Icon: <input type="file" name="icon"></div>
+  <div class="form-check mb-1">
+    <input class="form-check-input" type="checkbox" value="1" name="remove_icon" id="remove{{ c.id }}">
+    <label class="form-check-label" for="remove{{ c.id }}">Remove existing icon</label>
+  </div>
   <button class="btn btn-secondary me-2" type="submit">Save</button>
 </form>
 <form method="post" class="mb-4">
@@ -49,6 +55,17 @@
 </form>
 {% endfor %}
 <h2>News Items</h2>
+<form method="post" class="mb-3">
+  <input type="hidden" name="action" value="fetch_news">
+  <button class="btn btn-primary" type="submit">Fetch Latest News</button>
+</form>
+<form method="post" class="mb-3">
+  <input type="hidden" name="action" value="create_news">
+  <input type="text" name="title" class="form-control mb-1" placeholder="Title">
+  <input type="text" name="url" class="form-control mb-1" placeholder="URL">
+  <textarea name="summary" class="form-control mb-1" rows="2" placeholder="Summary"></textarea>
+  <button class="btn btn-primary" type="submit">Add News Item</button>
+</form>
 {% for n in items %}
 <form method="post" class="mb-2">
   <input type="hidden" name="action" value="update_news">
@@ -77,6 +94,9 @@
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
   CKEDITOR.replace('new_description');
+  document.querySelectorAll('textarea.blog-content').forEach(function(el){
+    CKEDITOR.replace(el);
+  });
   document.querySelectorAll('textarea[name="description"]').forEach(function(el){
     if (el.id !== 'new_description') { CKEDITOR.replace(el); }
   });
