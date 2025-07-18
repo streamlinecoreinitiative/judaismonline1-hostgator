@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="card mb-4">
+  {% if course.icon %}
+  <img src="{{ url_for('static', filename='uploads/' ~ course.icon) }}" class="card-img-top" alt="Course image">
+  {% else %}
   <img src="https://placehold.co/600x300?text=Course" class="card-img-top" alt="Course image">
+  {% endif %}
   <div class="card-body">
     <h1 class="card-title">{{ course.title }}</h1>
     <p class="card-text"><strong>Difficulty:</strong> {{ course.difficulty }}</p>

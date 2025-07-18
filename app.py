@@ -14,10 +14,13 @@ from flask_sqlalchemy import SQLAlchemy
 import ollama
 import random
 import requests
+from werkzeug.utils import secure_filename
+from sqlalchemy import inspect
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.secret_key = os.environ.get('SECRET_KEY', 'secret')
 db = SQLAlchemy(app)
 
@@ -35,6 +38,8 @@ class Course(db.Model):
     description = db.Column(db.Text, nullable=False)
     difficulty = db.Column(db.String(20), nullable=False)
     prerequisites = db.Column(db.Text)
+    # Optional icon image filename stored in static/uploads
+    icon = db.Column(db.String(200))
 
 
 class Page(db.Model):
@@ -106,9 +111,29 @@ def generate_blog_post() -> tuple[str, str]:
     return title, content
 
 
+def fetch_news_items() -> None:
+    """Fetch latest news from the API and store new items."""
+    resp = requests.get(NEWS_API_URL, timeout=10)
+    resp.raise_for_status()
+    for item in resp.json():
+        title = item.get("title", {}).get("rendered", "")
+        url = item.get("link", "")
+        summary = item.get("excerpt", {}).get("rendered", "")
+        if not NewsItem.query.filter_by(url=url).first():
+            db.session.add(NewsItem(title=title, url=url, summary=summary))
+    db.session.commit()
+
+
 def create_tables():
     """Create database tables if they don't exist."""
     db.create_all()
+    # Ensure uploads folder exists
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Add icon column to Course if missing
+    inspector = inspect(db.engine)
+    cols = [c['name'] for c in inspector.get_columns('course')]
+    if 'icon' not in cols:
+        db.engine.execute('ALTER TABLE course ADD COLUMN icon VARCHAR(200)')
     # Initialize default editable pages
     default_pages = {
         "landing": "Welcome to Judaism Online!",
@@ -217,6 +242,12 @@ def admin():
             difficulty = request.form.get("difficulty", "Beginner")
             prerequisites = request.form.get("prerequisites", "")
             description = request.form.get("description", "").strip()
+            file = request.files.get("icon")
+            icon_name = None
+            if file and file.filename:
+                os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+                icon_name = secure_filename(file.filename)
+                file.save(os.path.join(app.config["UPLOAD_FOLDER"], icon_name))
             if not description:
                 prompt = (
                     f"Create a detailed, comprehensive course on {topic} for those interested in converting to Judaism. "
@@ -228,6 +259,7 @@ def admin():
                 description=description,
                 difficulty=difficulty,
                 prerequisites=prerequisites,
+                icon=icon_name,
             )
             db.session.add(course)
             db.session.commit()
@@ -237,11 +269,38 @@ def admin():
             course.description = request.form.get("description")
             course.difficulty = request.form.get("difficulty")
             course.prerequisites = request.form.get("prerequisites")
+            if request.form.get("remove_icon"):
+                if course.icon:
+                    try:
+                        os.remove(os.path.join(app.config["UPLOAD_FOLDER"], course.icon))
+                    except Exception:
+                        pass
+                course.icon = None
+            file = request.files.get("icon")
+            if file and file.filename:
+                os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+                if course.icon:
+                    try:
+                        os.remove(os.path.join(app.config["UPLOAD_FOLDER"], course.icon))
+                    except Exception:
+                        pass
+                icon_name = secure_filename(file.filename)
+                file.save(os.path.join(app.config["UPLOAD_FOLDER"], icon_name))
+                course.icon = icon_name
             db.session.commit()
         elif action == "delete_course":
             course = Course.query.get_or_404(request.form.get("id"))
             db.session.delete(course)
             db.session.commit()
+        elif action == "fetch_news":
+            fetch_news_items()
+        elif action == "create_news":
+            title = request.form.get("title", "")
+            url = request.form.get("url", "")
+            summary = request.form.get("summary", "")
+            if title and url:
+                db.session.add(NewsItem(title=title, url=url, summary=summary))
+                db.session.commit()
         elif action == "update_news":
             item = NewsItem.query.get_or_404(request.form.get("id"))
             item.title = request.form.get("title")
