@@ -9,6 +9,7 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - Admin interface to create new blog posts and courses on demand and edit page content.
 - Courses include difficulty levels and prerequisites.
 - Printable certificate page after completing a course.
+- Full course pages display all sections together using a modern accordion layout.
 - News section populated from the JTA API (`update_news.py`).
 - Optional `update_site.py` script automates creating posts, freezing the site
   and pushing updates to GitHub.

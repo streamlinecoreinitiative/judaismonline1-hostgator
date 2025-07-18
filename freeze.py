@@ -25,6 +25,12 @@ def certificate():
 
 
 @freezer.register_generator
+def course_full():
+    for course in Course.query.all():
+        yield {'course_id': course.id}
+
+
+@freezer.register_generator
 def course_section():
     for section in CourseSection.query.all():
         yield {'course_id': section.course_id, 'section_id': section.id}

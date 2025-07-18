@@ -272,6 +272,18 @@ def certificate(course_id):
     return render_template("certificate.html", course=course)
 
 
+@app.route("/courses/<int:course_id>/full/")
+def course_full(course_id):
+    """Display the entire course with all sections in one page."""
+    course = Course.query.get_or_404(course_id)
+    sections = (
+        CourseSection.query.filter_by(course_id=course_id)
+        .order_by(CourseSection.order)
+        .all()
+    )
+    return render_template("course_full.html", course=course, sections=sections)
+
+
 @app.route("/courses/<int:course_id>/section/<int:section_id>/", methods=["GET", "POST"])
 def course_section(course_id, section_id):
     course = Course.query.get_or_404(course_id)
