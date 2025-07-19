@@ -3,6 +3,7 @@
 <head>
   <title>Faq</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
@@ -24,9 +25,36 @@
   </div>
 </nav>
 <div class="container">
-  
-  <h1>Faq</h1>
-  <div>Frequently asked questions placeholder.</div>
+
+  <h1>Frequently Asked Questions</h1>
+
+  <div class="accordion" id="faqAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q1">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a1">What is Judaism Online?</button>
+      </h2>
+      <div id="a1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">Judaism Online is a free educational site offering articles, classes and news about Jewish life and tradition.</div>
+      </div>
+    </div>
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q2">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a2">Do I need any prior knowledge?</button>
+      </h2>
+      <div id="a2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">No prior background is required. Our beginner courses are designed for newcomers and those exploring conversion.</div>
+      </div>
+    </div>
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="q3">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a3">Is the content free?</button>
+      </h2>
+      <div id="a3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+        <div class="accordion-body">Yes. All articles and courses currently published on Judaism Online are available at no cost.</div>
+      </div>
+    </div>
+  </div>
+  <img src="/static/faq.jpg" alt="FAQ" class="img-fluid my-4">
 
 </div>
 </body>
