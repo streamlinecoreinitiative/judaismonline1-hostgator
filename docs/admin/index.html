@@ -24,25 +24,33 @@
         <li class="nav-item"><a class="nav-link" href="../news/index.html"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
       </ul>
       
-        <a class="btn btn-outline-primary" href="../login/index.html"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</a>
-      
     </div>
   </div>
 </nav>
 <div class="container">
   
 <h1>Admin</h1>
+<p><strong>Certificate sender:</strong> not set</p>
 <form method="post" class="mb-3">
+  <input type="hidden" name="action" value="update_setting">
+  <input type="hidden" name="key" value="admin_email">
+  <div class="input-group">
+    <input type="email" name="value" class="form-control" placeholder="Sender email" value="not set">
+    <button class="btn btn-secondary" type="submit">Save</button>
+  </div>
+</form>
+<form method="post" class="mb-3 show-spinner">
   <input type="hidden" name="action" value="blog">
   <button class="btn btn-primary" type="submit">Generate Blog Post</button>
 </form>
 <h2>Blog Posts</h2>
 
-<form method="post" enctype="multipart/form-data" class="mb-3">
+<form method="post" enctype="multipart/form-data" class="mb-3 show-spinner">
   <input type="hidden" name="action" value="course">
   <div class="mb-1">Topic: <input type="text" name="topic"></div>
   <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
   <div class="mb-1">Prerequisites: <input type="text" name="prerequisites"></div>
+  <div class="mb-1">Number of Modules (max 10): <input type="number" name="module_count" value="3" min="1" max="10"></div>
   <div class="mb-1">
     Description:
     <textarea name="description" id="new_description" class="form-control" rows="4"></textarea>
@@ -161,6 +169,18 @@ Yes. We periodically offer webinars and virtual Q&amp;A sessions with guest teac
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
 
+<form method="post" class="mb-4">
+  <input type="hidden" name="action" value="page">
+  <input type="hidden" name="slug" value="terms">
+  <h3>Terms</h3>
+  <textarea name="content" class="form-control" rows="4">## Terms and Disclaimer
+Personal information such as usernames and optional email addresses is encrypted in our database using industry standard technology. All courses and articles are offered free of charge. Certificates are also free, though you may choose to contribute a small fee to help support the site&#39;s operating costs. Providing an email lets us send news and enables password recovery. We never share your data.
+
+### Disclaimer
+Some content is generated with local AI models and may contain errors. Always consult qualified authorities when making important decisions.</textarea>
+  <button class="btn btn-secondary mt-2" type="submit">Save</button>
+</form>
+
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
   CKEDITOR.replace('new_description');
@@ -170,12 +190,30 @@ Yes. We periodically offer webinars and virtual Q&amp;A sessions with guest teac
   document.querySelectorAll('textarea[name="description"]').forEach(function(el){
     if (el.id !== 'new_description') { CKEDITOR.replace(el); }
   });
+  document.querySelectorAll('textarea.module-content').forEach(function(el){
+    CKEDITOR.replace(el);
+  });
 </script>
 
+</div>
+<footer class="text-center mt-4">
+  <a href="../terms/index.html">Terms &amp; Disclaimer</a>
+</footer>
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 1050;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script>
   AOS.init();
+</script>
+<script>
+  document.querySelectorAll('form.show-spinner').forEach(function(f){
+    f.addEventListener('submit', function(){
+      document.getElementById('loading-overlay').classList.remove('d-none');
+    });
+  });
 </script>
 </body>
 </html>

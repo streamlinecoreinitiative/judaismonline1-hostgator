@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1>Admin</h1>
-<p><strong>Users:</strong> {{ user_count }} | <strong>Purchases:</strong> {{ purchase_count }} | <strong>Completed Courses:</strong> {{ completion_count }}</p>
 <p><strong>Certificate sender:</strong> {{ admin_email }}</p>
 <form method="post" class="mb-3">
   <input type="hidden" name="action" value="update_setting">

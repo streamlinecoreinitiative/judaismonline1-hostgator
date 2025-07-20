@@ -14,7 +14,7 @@ from flask import (
     abort,
 )
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+
 from cryptography.fernet import Fernet
 import ollama
 from markdown import markdown
@@ -126,34 +126,6 @@ class ContactMessage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email_enc = db.Column(db.LargeBinary)
-    password_hash = db.Column(db.String(128), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
-    recovery_email_enc = db.Column(db.LargeBinary)
-
-
-class Purchase(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
-    amount = db.Column(db.Float)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    user = db.relationship('User', backref='purchases')
-    course = db.relationship('Course')
-
-
-class CompletedCourse(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
-    completed_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    user = db.relationship('User', backref='completions')
-    course = db.relationship('Course')
 
 
 class SiteSetting(db.Model):
@@ -180,13 +152,6 @@ def set_setting(key: str, value: str) -> None:
 def require_login():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-
-
-def current_user() -> User | None:
-    uid = session.get("user_id")
-    if uid:
-        return User.query.get(uid)
-    return None
 
 
 def generate_text(prompt: str) -> str:
@@ -584,49 +549,6 @@ def login():
     return render_template("login.html")
 
 
-@app.route("/register/", methods=["GET", "POST"])
-def register():
-    error = None
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password")
-        confirm = request.form.get("confirm")
-        email = request.form.get("email", "").strip()
-        if not username or not password or password != confirm:
-            error = "Invalid input"
-        elif User.query.filter_by(username=username).first():
-            error = "Username already exists"
-        else:
-            user = User(
-                username=username,
-                password_hash=generate_password_hash(password),
-                email_enc=encrypt(email),
-            )
-            db.session.add(user)
-            db.session.commit()
-            session["user_id"] = user.id
-            return redirect(url_for("index"))
-    return render_template("register.html", error=error)
-
-
-@app.route("/user/login/", methods=["GET", "POST"])
-def user_login():
-    error = None
-    if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password")
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password_hash, password):
-            session["user_id"] = user.id
-            return redirect(url_for("index"))
-        error = "Invalid credentials"
-    return render_template("user_login.html", error=error)
-
-
-@app.route("/user/logout/")
-def user_logout():
-    session.pop("user_id", None)
-    return redirect(url_for("index"))
 
 
 @app.route("/logout/")
@@ -674,18 +596,8 @@ def certificate(course_id):
     name = None
     sent = False
     if request.method == "POST":
-        if request.form.get("support") and session.get("user_id"):
-            db.session.add(
-                Purchase(user_id=session["user_id"], course_id=course_id, amount=5.0)
-            )
-            db.session.commit()
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
-        if session.get("user_id"):
-            db.session.merge(
-                CompletedCourse(user_id=session["user_id"], course_id=course_id)
-            )
-            db.session.commit()
         score = session.get("quiz_scores", {}).get(str(course_id), 0)
         if name and email:
             pdf = generate_certificate_pdf(name, course.title, score)
@@ -938,9 +850,6 @@ def admin():
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
     courses = Course.query.all()
     items = NewsItem.query.all()
-    user_count = User.query.count()
-    purchase_count = Purchase.query.count()
-    completion_count = CompletedCourse.query.count()
     admin_email = get_setting("admin_email") or os.environ.get("ADMIN_EMAIL", "not set")
     return render_template(
         "admin.html",
@@ -948,9 +857,6 @@ def admin():
         posts=posts,
         courses=courses,
         items=items,
-        user_count=user_count,
-        purchase_count=purchase_count,
-        completion_count=completion_count,
         admin_email=admin_email,
     )
 

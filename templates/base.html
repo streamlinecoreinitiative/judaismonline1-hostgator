@@ -26,13 +26,6 @@
       {% if session.get('logged_in') %}
         <a class="btn btn-outline-secondary" href="{{ url_for('admin') }}"><i class="fa-solid fa-user-gear me-1"></i>Admin</a>
         <a class="btn btn-outline-secondary ms-2" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
-      {% else %}
-        {% if session.get('user_id') %}
-          <a class="btn btn-outline-secondary" href="{{ url_for('user_logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
-        {% else %}
-          <a class="btn btn-outline-primary" href="{{ url_for('user_login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</a>
-          <a class="btn btn-outline-primary ms-2" href="{{ url_for('register') }}">Register</a>
-        {% endif %}
       {% endif %}
     </div>
   </div>
