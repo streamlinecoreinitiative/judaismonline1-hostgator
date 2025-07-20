@@ -62,6 +62,22 @@ class CourseSection(db.Model):
     course = db.relationship("Course", backref=db.backref("sections", order_by="CourseSection.order"))
 
 
+class QuizQuestion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    question = db.Column(db.Text, nullable=False)
+    option_a = db.Column(db.String(200))
+    option_b = db.Column(db.String(200))
+    option_c = db.Column(db.String(200))
+    option_d = db.Column(db.String(200))
+    answer = db.Column(db.String(1))
+    order = db.Column(db.Integer)
+
+    course = db.relationship(
+        "Course", backref=db.backref("quiz_questions", order_by="QuizQuestion.order")
+    )
+
+
 class Page(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(50), unique=True, nullable=False)
@@ -139,28 +155,66 @@ def generate_blog_post() -> tuple[str, str]:
     return title, content
 
 
-def generate_course_sections(topic: str, count: int = 3):
-    """Return a list of section dicts with title, content, question and answer."""
+def generate_section_titles(topic: str, count: int = 3):
+    """Return a list of module titles for the course."""
     prompt = (
-        f"Create {count} sections for a course about {topic}. "
-        "For each section provide a title, detailed HTML content, one short multiple choice question with options A, B and C, and the correct answer letter. "
-        "Respond in JSON with a list of objects having 'title', 'content', 'question' and 'answer'."
+        f"Provide {count} concise module titles for a course about {topic}. "
+        "Respond in JSON as a simple list of strings."
+    )
+    import json
+    try:
+        data = json.loads(generate_text(prompt))
+    except Exception:
+        data = []
+    titles = [str(t) for t in data][:count]
+    if not titles:
+        titles = [f"Module {i}" for i in range(1, count + 1)]
+    return titles
+
+
+def generate_module_content(course_topic: str, module_title: str) -> str:
+    """Generate detailed HTML content for a single module."""
+    prompt = (
+        f"Write an in-depth HTML lesson for a course about {course_topic}. "
+        f"The module is titled '{module_title}'."
+    )
+    return generate_text(prompt).strip()
+
+
+def generate_course_sections(topic: str, count: int = 3):
+    """Return a list of section dicts with title and content."""
+    titles = generate_section_titles(topic, count)
+    sections = []
+    for i, title in enumerate(titles, 1):
+        content = generate_module_content(topic, title)
+        sections.append({"title": title, "content": content, "order": i})
+    return sections
+
+
+def generate_quiz_questions(topic: str, count: int = 10):
+    """Return a list of quiz question dicts."""
+    prompt = (
+        f"Create {count} multiple choice quiz questions summarizing key points about {topic}. "
+        "Provide options A, B, C and D and the correct answer letter. "
+        "Respond in JSON with a list of objects having 'question', 'a', 'b', 'c', 'd' and 'answer'."
     )
     import json
     try:
         data = json.loads(generate_text(prompt))
     except Exception:
         return []
-    sections = []
+    questions = []
     for i, item in enumerate(data, 1):
-        sections.append({
-            "title": item.get("title", f"Section {i}"),
-            "content": item.get("content", ""),
+        questions.append({
             "question": item.get("question", ""),
-            "answer": item.get("answer", "").strip(),
+            "a": item.get("a", ""),
+            "b": item.get("b", ""),
+            "c": item.get("c", ""),
+            "d": item.get("d", ""),
+            "answer": item.get("answer", "").strip().upper(),
             "order": i,
         })
-    return sections
+    return questions
 
 
 def fetch_news_items() -> None:
@@ -350,12 +404,15 @@ def course_detail(course_id):
     )
     completed = session.get("completed_sections", {}).get(str(course_id), [])
     all_done = sections and all(s.id in completed for s in sections)
+    quiz_passed = session.get("quiz_passed", {}).get(str(course_id))
     return render_template(
         "course_detail.html",
         course=course,
         sections=sections,
         completed=completed,
         all_done=all_done,
+        quiz_passed=quiz_passed,
+        can_download=all_done and quiz_passed,
     )
 
 
@@ -368,7 +425,10 @@ def certificate(course_id):
         .all()
     )
     completed = session.get("completed_sections", {}).get(str(course_id), [])
+    quiz_passed = session.get("quiz_passed", {}).get(str(course_id))
     if sections and not all(s.id in completed for s in sections):
+        abort(403)
+    if not quiz_passed:
         abort(403)
     name = None
     if request.method == "POST":
@@ -396,17 +456,60 @@ def course_section(course_id, section_id):
     section = CourseSection.query.get_or_404(section_id)
     completed = session.get("completed_sections", {}).get(str(course_id), [])
     if request.method == "POST":
-        answer = request.form.get("answer", "").strip().lower()
-        if answer == section.answer.strip().lower():
-            completed.append(section_id)
-            session.setdefault("completed_sections", {})[str(course_id)] = completed
-            session.modified = True
-            return redirect(url_for("course_detail", course_id=course_id))
+        if section.question and section.answer:
+            answer = request.form.get("answer", "").strip().lower()
+            if answer == section.answer.strip().lower():
+                completed.append(section_id)
+        else:
+            if request.form.get("complete"):
+                completed.append(section_id)
+        if section_id not in completed:
+            return render_template(
+                "course_section.html",
+                course=course,
+                section=section,
+                completed=False,
+                error=True,
+            )
+        session.setdefault("completed_sections", {})[str(course_id)] = completed
+        session.modified = True
+        return redirect(url_for("course_detail", course_id=course_id))
     return render_template(
         "course_section.html",
         course=course,
         section=section,
         completed=section_id in completed,
+        error=False,
+    )
+
+
+@app.route("/courses/<int:course_id>/quiz/", methods=["GET", "POST"])
+def course_quiz(course_id):
+    course = Course.query.get_or_404(course_id)
+    questions = (
+        QuizQuestion.query.filter_by(course_id=course_id)
+        .order_by(QuizQuestion.order)
+        .all()
+    )
+    score = None
+    passed = session.get("quiz_passed", {}).get(str(course_id))
+    if request.method == "POST":
+        correct = 0
+        for q in questions:
+            answer = request.form.get(str(q.id), "").upper()
+            if answer == q.answer:
+                correct += 1
+        score = correct
+        passed = correct >= 8
+        if passed:
+            session.setdefault("quiz_passed", {})[str(course_id)] = True
+            session.modified = True
+    return render_template(
+        "course_quiz.html",
+        course=course,
+        questions=questions,
+        score=score,
+        passed=passed,
     )
 
 
@@ -433,6 +536,7 @@ def admin():
             topic = request.form.get("topic", "Judaism")
             difficulty = request.form.get("difficulty", "Beginner")
             prerequisites = request.form.get("prerequisites", "")
+            module_count = min(int(request.form.get("module_count", 3)), 10)
             description = request.form.get("description", "").strip()
             file = request.files.get("icon")
             icon_name = None
@@ -456,16 +560,28 @@ def admin():
             db.session.add(course)
             db.session.commit()
             # Generate sections using the AI and store them
-            for sec in generate_course_sections(topic):
+            for sec in generate_course_sections(topic, module_count):
                 section = CourseSection(
                     course_id=course.id,
                     title=sec["title"],
                     content=sec["content"],
-                    question=sec["question"],
-                    answer=sec["answer"],
                     order=sec["order"],
                 )
                 db.session.add(section)
+            db.session.commit()
+            # Generate quiz questions for the course
+            for q in generate_quiz_questions(topic, 10):
+                question = QuizQuestion(
+                    course_id=course.id,
+                    question=q["question"],
+                    option_a=q["a"],
+                    option_b=q["b"],
+                    option_c=q["c"],
+                    option_d=q["d"],
+                    answer=q["answer"],
+                    order=q["order"],
+                )
+                db.session.add(question)
             db.session.commit()
         elif action == "update_course":
             course = Course.query.get_or_404(request.form.get("id"))
