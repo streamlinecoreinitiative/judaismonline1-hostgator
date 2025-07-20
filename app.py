@@ -30,6 +30,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['GENERATING_STATIC'] = False
+app.config['SHOW_LOGIN'] = True
 app.secret_key = os.environ.get('SECRET_KEY', 'secret')
 db = SQLAlchemy(app)
 

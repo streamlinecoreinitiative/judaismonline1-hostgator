@@ -23,7 +23,7 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('faq') }}"><i class="fa-solid fa-circle-question me-1"></i>FAQ</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('news') }}"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
       </ul>
-      {% if request.remote_addr in ('127.0.0.1', '::1') and not config.get('GENERATING_STATIC') %}
+      {% if config.get('SHOW_LOGIN') and request.remote_addr in ('127.0.0.1', '::1') %}
         {% if session.get('logged_in') %}
           <a class="btn btn-outline-secondary" href="{{ url_for('admin') }}"><i class="fa-solid fa-user-gear me-1"></i>Admin</a>
           <a class="btn btn-outline-secondary ms-2" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
