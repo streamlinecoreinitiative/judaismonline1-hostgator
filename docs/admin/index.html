@@ -26,6 +26,7 @@
 <div class="container">
   
 <h1>Admin</h1>
+<p class="mb-4">This dashboard lets you manage site content. Use the tools below to publish new blog posts, create course outlines and update informational pages.</p>
 <form method="post" class="mb-3">
   <input type="hidden" name="action" value="blog">
   <button class="btn btn-primary" type="submit">Generate Blog Post</button>
@@ -38,12 +39,13 @@
   <button class="btn btn-primary" type="submit">Generate Course</button>
 </form>
 <h2>Edit Pages</h2>
+<p class="mb-3">Select a section below to update its text. Any changes you make will appear immediately on the live site after saving.</p>
 
 <form method="post" class="mb-4">
   <input type="hidden" name="action" value="page">
   <input type="hidden" name="slug" value="landing">
   <h3>Landing</h3>
-  <textarea name="content" class="form-control" rows="4">Welcome to Judaism Online!</textarea>
+  <textarea name="content" class="form-control" rows="4">Judaism Online welcomes visitors with articles, courses and resources to explore Jewish thought.</textarea>
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
 
@@ -51,7 +53,7 @@
   <input type="hidden" name="action" value="page">
   <input type="hidden" name="slug" value="about">
   <h3>About</h3>
-  <textarea name="content" class="form-control" rows="4">About us placeholder text.</textarea>
+  <textarea name="content" class="form-control" rows="4">Learn about our mission to make Jewish wisdom accessible to all.</textarea>
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
 
@@ -59,7 +61,7 @@
   <input type="hidden" name="action" value="page">
   <input type="hidden" name="slug" value="contact">
   <h3>Contact</h3>
-  <textarea name="content" class="form-control" rows="4">Contact information placeholder.</textarea>
+  <textarea name="content" class="form-control" rows="4">Reach us at info@judaismonline.example or through the contact form.</textarea>
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
 
@@ -67,11 +69,10 @@
   <input type="hidden" name="action" value="page">
   <input type="hidden" name="slug" value="faq">
   <h3>Faq</h3>
-  <textarea name="content" class="form-control" rows="4">Frequently asked questions placeholder.</textarea>
+  <textarea name="content" class="form-control" rows="4">Answers to common questions about our content and courses.</textarea>
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
-
-
+<p class="text-muted">Remember to double-check your edits before saving. Incorrect formatting may affect how pages appear to visitors.</p>
 </div>
 </body>
 </html>
