@@ -4,3 +4,4 @@ ollama
 Frozen-Flask
 requests
 markdown
+cryptography

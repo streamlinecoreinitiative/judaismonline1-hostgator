@@ -40,6 +40,13 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 
 The application uses a SQLite database (`site.db`) created automatically on first run.
 
+User accounts can be created via the `/register/` page. Only a username and password
+are required. An optional email can be supplied for newsletter updates and password
+recovery. Personal details are encrypted in the database using a key provided by the
+`ENCRYPT_KEY` environment variable (one will be generated automatically if not set).
+Certificates are free, though an optional $5 contribution can be recorded to help
+cover site costs.
+
 Placeholder images used by the templates can be replaced in `static/`:
 
 - `hero.jpg`
