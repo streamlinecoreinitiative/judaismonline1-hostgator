@@ -21,13 +21,19 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fa-solid fa-circle-info me-1"></i>About</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fa-solid fa-envelope me-1"></i>Contact</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('faq') }}"><i class="fa-solid fa-circle-question me-1"></i>FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('terms') }}"><i class="fa-solid fa-file-contract me-1"></i>Terms</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('news') }}"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
       </ul>
       {% if session.get('logged_in') %}
         <a class="btn btn-outline-secondary" href="{{ url_for('admin') }}"><i class="fa-solid fa-user-gear me-1"></i>Admin</a>
         <a class="btn btn-outline-secondary ms-2" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
       {% else %}
-        <a class="btn btn-outline-primary" href="{{ url_for('login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</a>
+        {% if session.get('user_id') %}
+          <a class="btn btn-outline-secondary" href="{{ url_for('user_logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+        {% else %}
+          <a class="btn btn-outline-primary" href="{{ url_for('user_login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</a>
+          <a class="btn btn-outline-primary ms-2" href="{{ url_for('register') }}">Register</a>
+        {% endif %}
       {% endif %}
     </div>
   </div>

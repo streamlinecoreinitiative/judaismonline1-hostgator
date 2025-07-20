@@ -11,6 +11,8 @@ from flask import (
     abort,
 )
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from cryptography.fernet import Fernet
 import ollama
 from markdown import markdown
 import random
@@ -25,12 +27,30 @@ app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.secret_key = os.environ.get('SECRET_KEY', 'secret')
 db = SQLAlchemy(app)
 
+# Encryption key used to protect personal information
+_key = os.environ.get('ENCRYPT_KEY')
+if not _key:
+    _key = Fernet.generate_key()
+fernet = Fernet(_key)
+
 
 # Markdown filter to render AI-generated text nicely
 @app.template_filter('markdown')
 def markdown_filter(text: str) -> str:
     """Convert Markdown text to HTML."""
     return markdown(text or '')
+
+# Simple helpers to encrypt and decrypt text
+def encrypt(text: str) -> bytes:
+    if not text:
+        return None
+    return fernet.encrypt(text.encode())
+
+
+def decrypt(token: bytes) -> str:
+    if not token:
+        return ''
+    return fernet.decrypt(token).decode()
 
 
 class BlogPost(db.Model):
@@ -101,9 +121,46 @@ class ContactMessage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email_enc = db.Column(db.LargeBinary)
+    password_hash = db.Column(db.String(128), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    recovery_email_enc = db.Column(db.LargeBinary)
+
+
+class Purchase(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
+    amount = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    user = db.relationship('User', backref='purchases')
+    course = db.relationship('Course')
+
+
+class CompletedCourse(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
+    completed_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    user = db.relationship('User', backref='completions')
+    course = db.relationship('Course')
+
+
 def require_login():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
+
+
+def current_user() -> User | None:
+    uid = session.get("user_id")
+    if uid:
+        return User.query.get(uid)
+    return None
 
 
 def generate_text(prompt: str) -> str:
@@ -317,6 +374,15 @@ def create_tables():
             "Yes. We periodically offer webinars and virtual Q&A sessions with guest teachers. Event details are posted on our "
             "homepage and social media channels."
         ),
+        "terms": (
+            "## Terms and Conditions\n"
+            "Personal information such as usernames and optional email addresses "
+            "is encrypted in our database using industry standard technology. "
+            "All courses and articles are offered free of charge. Certificates "
+            "are also free, though you may choose to pay a small fee to help "
+            "support the site's operating costs. Providing an email lets us send "
+            "news and enables password recovery. We never share your data."
+        ),
     }
     for slug, content in default_pages.items():
         page = Page.query.filter_by(slug=slug).first()
@@ -372,6 +438,12 @@ def faq():
     return render_template("page.html", page=page)
 
 
+@app.route("/terms/")
+def terms():
+    page = Page.query.filter_by(slug="terms").first()
+    return render_template("page.html", page=page)
+
+
 @app.route("/news/")
 def news():
     items = NewsItem.query.order_by(NewsItem.created_at.desc()).all()
@@ -386,6 +458,51 @@ def login():
             session["logged_in"] = True
             return redirect(url_for("admin"))
     return render_template("login.html")
+
+
+@app.route("/register/", methods=["GET", "POST"])
+def register():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password")
+        confirm = request.form.get("confirm")
+        email = request.form.get("email", "").strip()
+        if not username or not password or password != confirm:
+            error = "Invalid input"
+        elif User.query.filter_by(username=username).first():
+            error = "Username already exists"
+        else:
+            user = User(
+                username=username,
+                password_hash=generate_password_hash(password),
+                email_enc=encrypt(email),
+            )
+            db.session.add(user)
+            db.session.commit()
+            session["user_id"] = user.id
+            return redirect(url_for("index"))
+    return render_template("register.html", error=error)
+
+
+@app.route("/user/login/", methods=["GET", "POST"])
+def user_login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password")
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            session["user_id"] = user.id
+            return redirect(url_for("index"))
+        error = "Invalid credentials"
+    return render_template("user_login.html", error=error)
+
+
+@app.route("/user/logout/")
+def user_logout():
+    session.pop("user_id", None)
+    return redirect(url_for("index"))
 
 
 @app.route("/logout/")
@@ -432,7 +549,17 @@ def certificate(course_id):
         abort(403)
     name = None
     if request.method == "POST":
+        if request.form.get("support") and session.get("user_id"):
+            db.session.add(
+                Purchase(user_id=session["user_id"], course_id=course_id, amount=5.0)
+            )
+            db.session.commit()
         name = request.form.get("name", "").strip()
+        if session.get("user_id"):
+            db.session.merge(
+                CompletedCourse(user_id=session["user_id"], course_id=course_id)
+            )
+            db.session.commit()
     return render_template(
         "certificate.html", course=course, sections=sections, name=name
     )
@@ -667,7 +794,21 @@ def admin():
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
     courses = Course.query.all()
     items = NewsItem.query.all()
-    return render_template("admin.html", pages=pages, posts=posts, courses=courses, items=items)
+    user_count = User.query.count()
+    purchase_count = Purchase.query.count()
+    completion_count = CompletedCourse.query.count()
+    admin_email = os.environ.get("ADMIN_EMAIL", "not set")
+    return render_template(
+        "admin.html",
+        pages=pages,
+        posts=posts,
+        courses=courses,
+        items=items,
+        user_count=user_count,
+        purchase_count=purchase_count,
+        completion_count=completion_count,
+        admin_email=admin_email,
+    )
 
 
 if __name__ == "__main__":
