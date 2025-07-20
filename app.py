@@ -29,6 +29,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+app.config['GENERATING_STATIC'] = False
 app.secret_key = os.environ.get('SECRET_KEY', 'secret')
 db = SQLAlchemy(app)
 
@@ -150,6 +151,8 @@ def set_setting(key: str, value: str) -> None:
 
 
 def require_login():
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        abort(403)
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
@@ -540,6 +543,8 @@ def news():
 
 @app.route("/login/", methods=["GET", "POST"])
 def login():
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        abort(403)
     if request.method == "POST":
         password = request.form.get("password")
         if password == os.environ.get("ADMIN_PASSWORD", "bere"):
@@ -840,23 +845,17 @@ def admin():
             if page:
                 page.content = content
                 db.session.commit()
-        elif action == "update_setting":
-            key = request.form.get("key")
-            value = request.form.get("value", "")
-            set_setting(key, value)
         return redirect(url_for("admin"))
     pages = Page.query.all()
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
     courses = Course.query.all()
     items = NewsItem.query.all()
-    admin_email = get_setting("admin_email") or os.environ.get("ADMIN_EMAIL", "not set")
     return render_template(
         "admin.html",
         pages=pages,
         posts=posts,
         courses=courses,
         items=items,
-        admin_email=admin_email,
     )
 
 

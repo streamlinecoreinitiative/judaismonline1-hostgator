@@ -14,6 +14,9 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - News section populated from the JTA API (`update_news.py`).
 - Optional `update_site.py` script automates creating posts, freezing the site
   and pushing updates to GitHub.
+- Login and admin pages are only available when running the Flask app locally
+  and are excluded from the static site. The navigation bar hides the related
+  buttons when pages are frozen so they won't appear on GitHub Pages.
 
 ## Setup
 
@@ -82,6 +85,9 @@ deployment workflow.
 
 `update_site.py` provides a simple way to automate this process locally. It
 creates new posts, freezes the site and pushes the result in a single command.
+Run this script daily using your operating system's scheduler (e.g. `cron`).
+Schedule it about an hour after your daily content generation so all new blog
+posts and news items are included before the static site is pushed to GitHub.
 
 Other static hosting platforms such as Netlify or Vercel can be used if you
 prefer. Any service capable of serving the generated `docs/` directory will
