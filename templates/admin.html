@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1>Admin</h1>
-<form method="post" class="mb-3">
+<form method="post" class="mb-3 show-spinner">
   <input type="hidden" name="action" value="blog">
   <button class="btn btn-primary" type="submit">Generate Blog Post</button>
 </form>
@@ -20,7 +20,7 @@
   <button class="btn btn-danger" type="submit">Delete</button>
 </form>
 {% endfor %}
-<form method="post" enctype="multipart/form-data" class="mb-3">
+<form method="post" enctype="multipart/form-data" class="mb-3 show-spinner">
   <input type="hidden" name="action" value="course">
   <div class="mb-1">Topic: <input type="text" name="topic"></div>
   <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
@@ -54,6 +54,44 @@
   <input type="hidden" name="id" value="{{ c.id }}">
   <button class="btn btn-danger" type="submit">Delete</button>
 </form>
+<h4 class="mt-3">Modules</h4>
+{% for s in c.sections %}
+<form method="post" class="mb-2">
+  <input type="hidden" name="action" value="update_section">
+  <input type="hidden" name="id" value="{{ s.id }}">
+  <input type="text" name="title" class="form-control mb-1" value="{{ s.title }}">
+  <textarea name="content" class="form-control mb-1 module-content" rows="3">{{ s.content }}</textarea>
+  <input type="text" name="question" class="form-control mb-1" placeholder="Question" value="{{ s.question }}">
+  <input type="text" name="answer" class="form-control mb-1" placeholder="Answer" value="{{ s.answer }}">
+  <button class="btn btn-secondary me-2" type="submit">Save</button>
+</form>
+<form method="post" class="mb-3">
+  <input type="hidden" name="action" value="delete_section">
+  <input type="hidden" name="id" value="{{ s.id }}">
+  <button class="btn btn-danger" type="submit">Delete</button>
+</form>
+{% endfor %}
+<h4>Quiz Questions</h4>
+{% for q in c.quiz_questions %}
+<form method="post" class="mb-2">
+  <input type="hidden" name="action" value="update_question">
+  <input type="hidden" name="id" value="{{ q.id }}">
+  <input type="text" name="question" class="form-control mb-1" value="{{ q.question }}">
+  <div class="row mb-1">
+    <div class="col"><input type="text" name="a" class="form-control" placeholder="A" value="{{ q.option_a }}"></div>
+    <div class="col"><input type="text" name="b" class="form-control" placeholder="B" value="{{ q.option_b }}"></div>
+    <div class="col"><input type="text" name="c" class="form-control" placeholder="C" value="{{ q.option_c }}"></div>
+    <div class="col"><input type="text" name="d" class="form-control" placeholder="D" value="{{ q.option_d }}"></div>
+  </div>
+  <div class="mb-1">Correct Answer: <input type="text" name="answer" class="form-control" value="{{ q.answer }}"></div>
+  <button class="btn btn-secondary me-2" type="submit">Save</button>
+</form>
+<form method="post" class="mb-3">
+  <input type="hidden" name="action" value="delete_question">
+  <input type="hidden" name="id" value="{{ q.id }}">
+  <button class="btn btn-danger" type="submit">Delete</button>
+</form>
+{% endfor %}
 {% endfor %}
 <h2>News Items</h2>
 <form method="post" class="mb-3">
@@ -100,6 +138,9 @@
   });
   document.querySelectorAll('textarea[name="description"]').forEach(function(el){
     if (el.id !== 'new_description') { CKEDITOR.replace(el); }
+  });
+  document.querySelectorAll('textarea.module-content').forEach(function(el){
+    CKEDITOR.replace(el);
   });
 </script>
 {% endblock %}

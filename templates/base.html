@@ -35,9 +35,21 @@
 <div class="container">
   {% block content %}{% endblock %}
 </div>
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 1050;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script>
   AOS.init();
+</script>
+<script>
+  document.querySelectorAll('form.show-spinner').forEach(function(f){
+    f.addEventListener('submit', function(){
+      document.getElementById('loading-overlay').classList.remove('d-none');
+    });
+  });
 </script>
 </body>
 </html>
