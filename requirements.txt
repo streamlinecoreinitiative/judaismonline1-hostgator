@@ -5,3 +5,4 @@ Frozen-Flask
 requests
 markdown
 cryptography
+reportlab
