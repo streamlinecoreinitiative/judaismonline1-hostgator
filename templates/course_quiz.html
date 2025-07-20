@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">{{ course.title }} - Quiz</h1>
+{% if score is not none %}
+<p>Your score: {{ score }}/{{ questions|length }}</p>
+{% if passed %}
+<div class="alert alert-success">You passed! Return to the course page to download your certificate.</div>
+{% else %}
+<div class="alert alert-danger">You need at least 8 correct answers to pass.</div>
+{% endif %}
+{% endif %}
+<form method="post">
+  {% for q in questions %}
+  <div class="mb-3">
+    <p><strong>{{ loop.index }}. {{ q.question }}</strong></p>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="{{ q.id }}" value="A" id="q{{ q.id }}a" required>
+      <label class="form-check-label" for="q{{ q.id }}a">{{ q.option_a }}</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="{{ q.id }}" value="B" id="q{{ q.id }}b">
+      <label class="form-check-label" for="q{{ q.id }}b">{{ q.option_b }}</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="{{ q.id }}" value="C" id="q{{ q.id }}c">
+      <label class="form-check-label" for="q{{ q.id }}c">{{ q.option_c }}</label>
+    </div>
+    {% if q.option_d %}
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="{{ q.id }}" value="D" id="q{{ q.id }}d">
+      <label class="form-check-label" for="q{{ q.id }}d">{{ q.option_d }}</label>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <button class="btn btn-primary" type="submit">Submit Quiz</button>
+</form>
+{% endblock %}
