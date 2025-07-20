@@ -283,6 +283,9 @@ def clean_module_content(html: str, title: str) -> str:
     # Remove references to next modules that the model occasionally adds
     html = re.sub(r"(?i)next module.*", "", html)
 
+    # Strip any leading mentions of HTML or "HTML Lesson" phrases
+    html = re.sub(r"(?i)^\s*HTML(?:\s*Lesson)?\s*[:\-]?\s*", "", html)
+
     # Ensure the module starts with a heading matching the title
     if title and not re.search(r"<h\d", html):
         html = f"<h2>{title}</h2>\n" + html
@@ -306,8 +309,9 @@ def generate_section_titles(topic: str, count: int = 3):
 def generate_module_content(course_topic: str, module_title: str) -> str:
     """Generate detailed HTML content for a single module."""
     prompt = (
-        f"Write an in-depth lesson in HTML format for a course about {course_topic}. "
-        f"The module is titled '{module_title}'."
+        f"Write an in-depth lesson formatted in HTML for a course about {course_topic}. "
+        f"The module is titled '{module_title}'. Respond only with the HTML markup "
+        "for the lesson and do not mention that it is HTML."
     )
     content = generate_text(prompt).strip()
     return clean_module_content(content, module_title)
