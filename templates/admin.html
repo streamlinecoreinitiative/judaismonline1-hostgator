@@ -2,7 +2,15 @@
 {% block content %}
 <h1>Admin</h1>
 <p><strong>Users:</strong> {{ user_count }} | <strong>Purchases:</strong> {{ purchase_count }} | <strong>Completed Courses:</strong> {{ completion_count }}</p>
-<p><strong>Recovery email:</strong> {{ admin_email }}</p>
+<p><strong>Certificate sender:</strong> {{ admin_email }}</p>
+<form method="post" class="mb-3">
+  <input type="hidden" name="action" value="update_setting">
+  <input type="hidden" name="key" value="admin_email">
+  <div class="input-group">
+    <input type="email" name="value" class="form-control" placeholder="Sender email" value="{{ admin_email }}">
+    <button class="btn btn-secondary" type="submit">Save</button>
+  </div>
+</form>
 <form method="post" class="mb-3 show-spinner">
   <input type="hidden" name="action" value="blog">
   <button class="btn btn-primary" type="submit">Generate Blog Post</button>

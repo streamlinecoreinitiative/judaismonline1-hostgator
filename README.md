@@ -9,6 +9,7 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - Admin interface to create new blog posts and courses on demand and edit page content.
 - Courses include difficulty levels and prerequisites.
 - Printable certificate page after completing a course.
+- Certificates can also be emailed as PDFs.
 - Full course pages display all sections together using a modern accordion layout.
 - News section populated from the JTA API (`update_news.py`).
 - Optional `update_site.py` script automates creating posts, freezing the site
@@ -46,6 +47,11 @@ recovery. Personal details are encrypted in the database using a key provided by
 `ENCRYPT_KEY` environment variable (one will be generated automatically if not set).
 Certificates are free, though an optional $5 contribution can be recorded to help
 cover site costs.
+
+To send PDF certificates via email, provide SMTP details using the `SMTP_SERVER`,
+`SMTP_PORT`, `SMTP_USER` and `SMTP_PASSWORD` environment variables. The sender
+address can be configured from the admin page or via the `ADMIN_EMAIL`
+environment variable.
 
 Placeholder images used by the templates can be replaced in `static/`:
 

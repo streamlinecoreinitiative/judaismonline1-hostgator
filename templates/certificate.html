@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-{% if name %}
+{% if sent %}
+<div class="alert alert-success">Certificate emailed to {{ name }}.</div>
+{% elif name %}
 <body onload="window.print()" class="p-5">
 <h1>Certificate of Completion</h1>
 <p>Congratulations {{ name }} on completing the course: {{ course.title }}</p>
@@ -16,6 +18,10 @@
   <div class="mb-3">
     <label for="name" class="form-label">Your Name</label>
     <input class="form-control" id="name" name="name" placeholder="Your name">
+  </div>
+  <div class="mb-3">
+    <label for="email" class="form-label">Email</label>
+    <input class="form-control" id="email" name="email" placeholder="you@example.com">
   </div>
   <p class="mb-2">Certificates are free. You may optionally contribute $5 to support the site.</p>
   <button class="btn btn-primary me-2" type="submit">Generate Certificate</button>

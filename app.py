@@ -1,5 +1,8 @@
 import datetime
 import os
+from io import BytesIO
+import smtplib
+from email.message import EmailMessage
 
 from flask import (
     Flask,
@@ -19,6 +22,8 @@ import random
 import requests
 from werkzeug.utils import secure_filename
 from sqlalchemy import inspect, text
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -151,6 +156,27 @@ class CompletedCourse(db.Model):
     course = db.relationship('Course')
 
 
+class SiteSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.Text)
+
+
+def get_setting(key: str, default: str | None = None) -> str | None:
+    setting = SiteSetting.query.filter_by(key=key).first()
+    return setting.value if setting else default
+
+
+def set_setting(key: str, value: str) -> None:
+    setting = SiteSetting.query.filter_by(key=key).first()
+    if setting:
+        setting.value = value
+    else:
+        setting = SiteSetting(key=key, value=value)
+        db.session.add(setting)
+    db.session.commit()
+
+
 def require_login():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
@@ -241,6 +267,45 @@ def parse_json_response(text: str):
         except Exception:
             pass
     return None
+
+
+def generate_certificate_pdf(name: str, course: str, score: int) -> bytes:
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(300, 720, "Certificate of Completion")
+    c.setFont("Helvetica", 16)
+    c.drawCentredString(300, 680, f"Awarded to {name}")
+    c.drawCentredString(300, 650, f"Course: {course}")
+    c.drawCentredString(300, 620, f"Score: {score}")
+    c.drawCentredString(300, 590, datetime.date.today().strftime("%B %d, %Y"))
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()
+
+
+def send_email(to_addr: str, subject: str, body: str, attachment: bytes | None = None) -> None:
+    msg = EmailMessage()
+    sender = get_setting("admin_email") or os.environ.get("ADMIN_EMAIL")
+    if not sender:
+        return
+    msg["From"] = sender
+    msg["To"] = to_addr
+    msg["Subject"] = subject
+    msg.set_content(body)
+    if attachment:
+        msg.add_attachment(attachment, maintype="application", subtype="pdf", filename="certificate.pdf")
+    server = os.environ.get("SMTP_SERVER")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ.get("SMTP_USER")
+    password = os.environ.get("SMTP_PASSWORD")
+    if server:
+        with smtplib.SMTP(server, port) as smtp:
+            smtp.starttls()
+            if user and password:
+                smtp.login(user, password)
+            smtp.send_message(msg)
 
 
 def clean_module_content(html: str, title: str) -> str:
@@ -431,6 +496,8 @@ def create_tables():
         else:
             page.content = content
     db.session.commit()
+    if not get_setting("admin_email") and os.environ.get("ADMIN_EMAIL"):
+        set_setting("admin_email", os.environ.get("ADMIN_EMAIL"))
 
 
 @app.route("/")
@@ -588,6 +655,7 @@ def certificate(course_id):
     if not quiz_passed:
         abort(403)
     name = None
+    sent = False
     if request.method == "POST":
         if request.form.get("support") and session.get("user_id"):
             db.session.add(
@@ -595,13 +663,24 @@ def certificate(course_id):
             )
             db.session.commit()
         name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
         if session.get("user_id"):
             db.session.merge(
                 CompletedCourse(user_id=session["user_id"], course_id=course_id)
             )
             db.session.commit()
+        score = session.get("quiz_scores", {}).get(str(course_id), 0)
+        if name and email:
+            pdf = generate_certificate_pdf(name, course.title, score)
+            send_email(
+                email,
+                f"Your {course.title} certificate",
+                "Congratulations on completing the course!",
+                pdf,
+            )
+            sent = True
     return render_template(
-        "certificate.html", course=course, sections=sections, name=name
+        "certificate.html", course=course, sections=sections, name=name, sent=sent
     )
 
 
@@ -660,6 +739,9 @@ def course_quiz(course_id):
     )
     score = None
     passed = session.get("quiz_passed", {}).get(str(course_id))
+    stored_scores = session.get("quiz_scores", {})
+    if str(course_id) in stored_scores:
+        score = stored_scores[str(course_id)]
     if request.method == "POST":
         correct = 0
         for q in questions:
@@ -667,10 +749,11 @@ def course_quiz(course_id):
             if answer == q.answer:
                 correct += 1
         score = correct
+        session.setdefault("quiz_scores", {})[str(course_id)] = correct
         passed = correct >= 8
         if passed:
             session.setdefault("quiz_passed", {})[str(course_id)] = True
-            session.modified = True
+        session.modified = True
     return render_template(
         "course_quiz.html",
         course=course,
@@ -829,6 +912,10 @@ def admin():
             if page:
                 page.content = content
                 db.session.commit()
+        elif action == "update_setting":
+            key = request.form.get("key")
+            value = request.form.get("value", "")
+            set_setting(key, value)
         return redirect(url_for("admin"))
     pages = Page.query.all()
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
@@ -837,7 +924,7 @@ def admin():
     user_count = User.query.count()
     purchase_count = Purchase.query.count()
     completion_count = CompletedCourse.query.count()
-    admin_email = os.environ.get("ADMIN_EMAIL", "not set")
+    admin_email = get_setting("admin_email") or os.environ.get("ADMIN_EMAIL", "not set")
     return render_template(
         "admin.html",
         pages=pages,
