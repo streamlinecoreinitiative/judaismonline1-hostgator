@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-  <title>Judaism Online</title>
+  <title>Terms</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
@@ -24,25 +24,37 @@
         <li class="nav-item"><a class="nav-link" href="../news/index.html"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
       </ul>
       
-        <a class="btn btn-outline-primary" href="index.html"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</a>
-      
     </div>
   </div>
 </nav>
 <div class="container">
   
-<h1 data-aos="fade-down">Admin Login</h1>
-<form method="post" data-aos="fade-up">
-  <div class="mb-3">
-    <input type="password" class="form-control" name="password" placeholder="Password"/>
-  </div>
-  <button class="btn btn-primary" type="submit"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</button>
-</form>
+  <h1 data-aos="fade-down">Terms</h1>
+  <div data-aos="fade-up"><h2>Terms and Disclaimer</h2>
+<p>Personal information such as usernames and optional email addresses is encrypted in our database using industry standard technology. All courses and articles are offered free of charge. Certificates are also free, though you may choose to contribute a small fee to help support the site's operating costs. Providing an email lets us send news and enables password recovery. We never share your data.</p>
+<h3>Disclaimer</h3>
+<p>Some content is generated with local AI models and may contain errors. Always consult qualified authorities when making important decisions.</p></div>
+  <img src="../static/terms.jpg" alt="Terms image" class="img-fluid my-4" data-aos="zoom-in">
 
+</div>
+<footer class="text-center mt-4">
+  <a href="index.html">Terms &amp; Disclaimer</a>
+</footer>
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 1050;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script>
   AOS.init();
+</script>
+<script>
+  document.querySelectorAll('form.show-spinner').forEach(function(f){
+    f.addEventListener('submit', function(){
+      document.getElementById('loading-overlay').classList.remove('d-none');
+    });
+  });
 </script>
 </body>
 </html>

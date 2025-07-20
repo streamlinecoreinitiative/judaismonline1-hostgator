@@ -41,12 +41,9 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 
 The application uses a SQLite database (`site.db`) created automatically on first run.
 
-User accounts can be created via the `/register/` page. Only a username and password
-are required. An optional email can be supplied for newsletter updates and password
-recovery. Personal details are encrypted in the database using a key provided by the
-`ENCRYPT_KEY` environment variable (one will be generated automatically if not set).
-Certificates are free, though an optional $5 contribution can be recorded to help
-cover site costs.
+No user registration is required. After finishing a course and passing the quiz,
+visitors can enter their name and email on the certificate page. A PDF certificate
+will be generated and emailed automatically.
 
 To send PDF certificates via email, provide SMTP details using the `SMTP_SERVER`,
 `SMTP_PORT`, `SMTP_USER` and `SMTP_PASSWORD` environment variables. The sender

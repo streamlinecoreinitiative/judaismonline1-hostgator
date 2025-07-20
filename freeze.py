@@ -8,8 +8,6 @@ app.config['FREEZER_IGNORE_URLS'] = [
     re.compile(r'/admin'),
     re.compile(r'/login'),
     re.compile(r'/logout'),
-    re.compile(r'/register'),
-    re.compile(r'/user'),
 ]
 # Use relative URLs so the site works when hosted from a subdirectory
 app.config['FREEZER_RELATIVE_URLS'] = True
