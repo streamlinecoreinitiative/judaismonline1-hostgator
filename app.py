@@ -175,7 +175,7 @@ def generate_section_titles(topic: str, count: int = 3):
 def generate_module_content(course_topic: str, module_title: str) -> str:
     """Generate detailed HTML content for a single module."""
     prompt = (
-        f"Write an in-depth HTML lesson for a course about {course_topic}. "
+        f"Write an in-depth lesson in HTML format for a course about {course_topic}. "
         f"The module is titled '{module_title}'."
     )
     return generate_text(prompt).strip()
@@ -611,6 +611,30 @@ def admin():
         elif action == "delete_course":
             course = Course.query.get_or_404(request.form.get("id"))
             db.session.delete(course)
+            db.session.commit()
+        elif action == "update_section":
+            section = CourseSection.query.get_or_404(request.form.get("id"))
+            section.title = request.form.get("title")
+            section.content = request.form.get("content")
+            section.question = request.form.get("question")
+            section.answer = request.form.get("answer")
+            db.session.commit()
+        elif action == "delete_section":
+            section = CourseSection.query.get_or_404(request.form.get("id"))
+            db.session.delete(section)
+            db.session.commit()
+        elif action == "update_question":
+            q = QuizQuestion.query.get_or_404(request.form.get("id"))
+            q.question = request.form.get("question")
+            q.option_a = request.form.get("a")
+            q.option_b = request.form.get("b")
+            q.option_c = request.form.get("c")
+            q.option_d = request.form.get("d")
+            q.answer = request.form.get("answer")
+            db.session.commit()
+        elif action == "delete_question":
+            q = QuizQuestion.query.get_or_404(request.form.get("id"))
+            db.session.delete(q)
             db.session.commit()
         elif action == "fetch_news":
             fetch_news_items()

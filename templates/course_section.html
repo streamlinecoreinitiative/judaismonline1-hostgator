@@ -10,7 +10,7 @@
   {% if error %}
   <p class="alert alert-danger">Incorrect answer or confirmation missing.</p>
   {% endif %}
-  <form method="post" data-aos="fade-up">
+  <form method="post">
     {% if section.question and section.answer %}
     <p>{{ section.question }}</p>
     <input class="form-control mb-2" type="text" name="answer" placeholder="Your answer">
