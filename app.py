@@ -456,12 +456,11 @@ def create_tables():
         ),
         "terms": (
             "## Terms and Disclaimer\n"
-            "Personal information such as usernames and optional email addresses "
-            "is encrypted in our database using industry standard technology. "
-            "All courses and articles are offered free of charge. Certificates "
-            "are also free, though you may choose to contribute a small fee to help "
-            "support the site's operating costs. Providing an email lets us send "
-            "news and enables password recovery. We never share your data.\n\n"
+            "Any personal details you provide remain private and are used only to "
+            "run the site and send optional updates. All courses and articles are "
+            "offered free of charge. Certificates are also free, though you may "
+            "choose to contribute a small fee to help support the site's operating "
+            "costs. We never share your information.\n\n"
             "### Disclaimer\n"
             "Some content is generated with local AI models and may contain errors. "
             "Always consult qualified authorities when making important decisions."
