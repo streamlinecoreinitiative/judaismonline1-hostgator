@@ -390,6 +390,16 @@ def fetch_news_items() -> None:
         if not NewsItem.query.filter_by(url=url).first():
             db.session.add(NewsItem(title=title, url=url, summary=summary))
     db.session.commit()
+    # Keep only the 25 most recent items
+    old_items = (
+        NewsItem.query.order_by(NewsItem.created_at.desc())
+        .offset(25)
+        .all()
+    )
+    for item in old_items:
+        db.session.delete(item)
+    if old_items:
+        db.session.commit()
 
 
 def create_tables():
@@ -480,13 +490,16 @@ def create_tables():
             "homepage and social media channels."
         ),
         "terms": (
-            "## Terms and Conditions\n"
+            "## Terms and Disclaimer\n"
             "Personal information such as usernames and optional email addresses "
             "is encrypted in our database using industry standard technology. "
             "All courses and articles are offered free of charge. Certificates "
-            "are also free, though you may choose to pay a small fee to help "
+            "are also free, though you may choose to contribute a small fee to help "
             "support the site's operating costs. Providing an email lets us send "
-            "news and enables password recovery. We never share your data."
+            "news and enables password recovery. We never share your data.\n\n"
+            "### Disclaimer\n"
+            "Some content is generated with local AI models and may contain errors. "
+            "Always consult qualified authorities when making important decisions."
         ),
     }
     for slug, content in default_pages.items():
@@ -553,7 +566,11 @@ def terms():
 
 @app.route("/news/")
 def news():
-    items = NewsItem.query.order_by(NewsItem.created_at.desc()).all()
+    items = (
+        NewsItem.query.order_by(NewsItem.created_at.desc())
+        .limit(25)
+        .all()
+    )
     return render_template("news.html", items=items)
 
 

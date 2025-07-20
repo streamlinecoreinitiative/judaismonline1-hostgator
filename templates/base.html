@@ -21,7 +21,6 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fa-solid fa-circle-info me-1"></i>About</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fa-solid fa-envelope me-1"></i>Contact</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('faq') }}"><i class="fa-solid fa-circle-question me-1"></i>FAQ</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('terms') }}"><i class="fa-solid fa-file-contract me-1"></i>Terms</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('news') }}"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
       </ul>
       {% if session.get('logged_in') %}
@@ -41,6 +40,9 @@
 <div class="container">
   {% block content %}{% endblock %}
 </div>
+<footer class="text-center mt-4">
+  <a href="{{ url_for('terms') }}">Terms &amp; Disclaimer</a>
+</footer>
 <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 1050;">
   <div class="spinner-border text-primary" role="status">
     <span class="visually-hidden">Loading...</span>
