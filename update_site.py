@@ -3,6 +3,7 @@ import subprocess
 
 COMMANDS = [
     ['python', 'daily_post.py'],
+    ['python', 'update_news.py'],
     ['python', 'freeze.py'],
 ]
 
