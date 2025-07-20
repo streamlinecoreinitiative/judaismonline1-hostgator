@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h1>{{ page.title }}</h1>
-  <div>{{ page.content|markdown|safe }}</div>
+  <img src="{{ url_for('static', filename=page.slug + '.jpg') }}" class="page-img" alt="{{ page.title }}">
+  <div class="content-card">
+    <h1>{{ page.title }}</h1>
+    <div>{{ page.content|markdown|safe }}</div>
+  </div>
 {% endblock %}

@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="p-5 mb-4 bg-light rounded-3">
-    <div class="container-fluid py-5">
-      <h1 class="display-5 fw-bold">{{ page.title }}</h1>
-      <p class="col-md-8 fs-4">{{ page.content|markdown|safe }}</p>
+  <div class="hero">
+    <div class="container py-5">
+      <h1 class="display-4 fw-bold">{{ page.title }}</h1>
+      <div class="lead mx-auto col-lg-8">{{ page.content|markdown|safe }}</div>
     </div>
   </div>
 {% endblock %}

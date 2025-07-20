@@ -1,25 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Admin</h1>
-<form method="post" class="mb-3">
-  <input type="hidden" name="action" value="blog">
-  <button class="btn btn-primary" type="submit">Generate Blog Post</button>
-</form>
-<h2>Blog Posts</h2>
-{% for post in posts %}
-<form method="post" class="mb-2">
-  <input type="hidden" name="action" value="update_blog">
+<div class="content-card">
+  <h1>Admin</h1>
+  <form method="post" class="mb-3">
+    <input type="hidden" name="action" value="blog">
+    <button class="btn btn-primary" type="submit">Generate Blog Post</button>
+  </form>
+  <h2>Blog Posts</h2>
+  {% for post in posts %}
+  <form method="post" class="mb-2">
+    <input type="hidden" name="action" value="update_blog">
   <input type="hidden" name="id" value="{{ post.id }}">
   <input type="text" name="title" class="form-control mb-1" value="{{ post.title }}">
   <textarea name="content" class="form-control mb-1 blog-content" rows="3">{{ post.content }}</textarea>
   <button class="btn btn-secondary me-2" type="submit">Save</button>
 </form>
-<form method="post" class="mb-4">
-  <input type="hidden" name="action" value="delete_blog">
-  <input type="hidden" name="id" value="{{ post.id }}">
-  <button class="btn btn-danger" type="submit">Delete</button>
-</form>
-{% endfor %}
+  <form method="post" class="mb-4">
+    <input type="hidden" name="action" value="delete_blog">
+    <input type="hidden" name="id" value="{{ post.id }}">
+    <button class="btn btn-danger" type="submit">Delete</button>
+  </form>
+  {% endfor %}
 <form method="post" enctype="multipart/form-data" class="mb-3">
   <input type="hidden" name="action" value="course">
   <div class="mb-1">Topic: <input type="text" name="topic"></div>
@@ -91,6 +92,7 @@
   <button class="btn btn-secondary mt-2" type="submit">Save</button>
 </form>
 {% endfor %}
+</div>
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
   CKEDITOR.replace('new_description');

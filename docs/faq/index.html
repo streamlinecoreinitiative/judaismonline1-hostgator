@@ -2,60 +2,56 @@
 <html>
 <head>
   <title>Faq</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="../static/style.css">
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+<body class="d-flex flex-column min-vh-100">
+<nav class="navbar navbar-expand-lg navbar-dark mb-3">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/">Judaism Online</a>
+    <a class="navbar-brand" href="../index.html">Judaism Online</a>
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="/blog/">Blog</a></li>
-        <li class="nav-item"><a class="nav-link" href="/courses/">Courses</a></li>
-        <li class="nav-item"><a class="nav-link" href="/about/">About</a></li>
-        <li class="nav-item"><a class="nav-link" href="/contact/">Contact</a></li>
-        <li class="nav-item"><a class="nav-link" href="/faq/">FAQ</a></li>
-        <li class="nav-item"><a class="nav-link" href="/news/">News</a></li>
+        <li class="nav-item"><a class="nav-link" href="../blog/index.html"><i class="fa-solid fa-rss me-1"></i>Blog</a></li>
+        <li class="nav-item"><a class="nav-link" href="../courses/index.html"><i class="fa-solid fa-graduation-cap me-1"></i>Courses</a></li>
+        <li class="nav-item"><a class="nav-link" href="../about/index.html"><i class="fa-solid fa-circle-info me-1"></i>About</a></li>
+        <li class="nav-item"><a class="nav-link" href="../contact/index.html"><i class="fa-solid fa-envelope me-1"></i>Contact</a></li>
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-question-circle me-1"></i>FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="../news/index.html"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
       </ul>
       
-        <a class="btn btn-outline-primary" href="/login/">Login</a>
+        <a class="btn btn-outline-primary" href="../login/index.html">Login</a>
       
     </div>
   </div>
 </nav>
-<div class="container">
-
-  <h1>Frequently Asked Questions</h1>
-
-  <div class="accordion" id="faqAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="q1">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a1">What is Judaism Online?</button>
-      </h2>
-      <div id="a1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-        <div class="accordion-body">Judaism Online is a free educational site offering articles, classes and news about Jewish life and tradition.</div>
-      </div>
-    </div>
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="q2">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a2">Do I need any prior knowledge?</button>
-      </h2>
-      <div id="a2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-        <div class="accordion-body">No prior background is required. Our beginner courses are designed for newcomers and those exploring conversion.</div>
-      </div>
-    </div>
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="q3">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a3">Is the content free?</button>
-      </h2>
-      <div id="a3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-        <div class="accordion-body">Yes. All articles and courses currently published on Judaism Online are available at no cost.</div>
-      </div>
-    </div>
+<div class="container flex-grow-1">
+  
+  <img src="../static/faq.jpg" class="page-img" alt="Faq">
+  <div class="content-card">
+    <h1>Faq</h1>
+    <div><h3>What is Judaism Online?</h3>
+<p>Judaism Online is a free educational site offering articles, classes and news about Jewish life and tradition.</p>
+<h3>Do I need any prior knowledge?</h3>
+<p>No prior background is required. Our beginner courses are designed for newcomers and those exploring conversion.</p>
+<h3>Is the content free?</h3>
+<p>Yes. All articles and courses currently published on Judaism Online are available at no cost.</p>
+<h3>Can I suggest a topic?</h3>
+<p>Absolutely! We welcome new ideas for articles and lessons. Use the contact form to send us your suggestions.</p>
+<h3>How often is new content added?</h3>
+<p>We post new blog entries weekly and regularly expand our course offerings throughout the year.</p>
+<h3>How do I enroll in a course?</h3>
+<p>Browse our course catalog and click the enrollment link on the course page. You'll receive email instructions for accessing lessons and tracking your progress.</p>
+<h3>Do you host live events?</h3>
+<p>Yes. We periodically offer webinars and virtual Q&amp;A sessions with guest teachers. Event details are posted on our homepage and social media channels.</p></div>
   </div>
-  <img src="/static/faq.jpg" alt="FAQ" class="img-fluid my-4">
 
 </div>
+<footer class="footer mt-auto">
+  &copy; 2025 Judaism Online
+</footer>
 </body>
 </html>

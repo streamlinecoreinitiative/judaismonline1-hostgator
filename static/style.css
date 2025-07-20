@@ -1,20 +1,70 @@
 .course-card { margin-bottom: 2rem; }
 .course-card img { height: 200px; object-fit: cover; }
 
+:root {
+  --brand-blue: #004b8d;
+  --brand-teal: #008ba3;
+  --brand-yellow: #ffcc33;
+  --brand-red: #d8463f;
+}
+
 body {
-  background-color: #f8f9fa;
+  background: linear-gradient(180deg, #f0f4f8, #e9eef5);
   color: #333;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Roboto', sans-serif;
+  line-height: 1.6;
+}
+
+h1, h2, h3, .navbar-brand {
+  font-family: 'Merriweather', serif;
+}
+.navbar {
+  background: linear-gradient(90deg, var(--brand-blue), var(--brand-teal));
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .hero {
-  background-color: #007bff;
+  background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('../hero.jpg') center/cover no-repeat;
   color: #fff;
-  padding: 4rem 2rem;
+  padding: 6rem 2rem;
   text-align: center;
   margin-bottom: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.15);
+}
+
+.content-card {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  border-top: 4px solid var(--brand-blue);
+}
+
+.contact-img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+.footer {
+  background: linear-gradient(90deg, var(--brand-teal), var(--brand-blue));
+  color: #fff;
+  text-align: center;
+  padding: 1rem;
+  margin-top: 2rem;
 }
 
 .section-heading {
-  color: #0056b3;
+  color: var(--brand-blue);
+}
+
+.page-img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  margin-bottom: 1rem;
 }

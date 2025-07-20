@@ -77,6 +77,14 @@ class NewsItem(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
+class ContactMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200))
+    email = db.Column(db.String(200))
+    message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
 def require_login():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
@@ -179,17 +187,89 @@ def create_tables():
     if 'icon' not in cols:
         with db.engine.begin() as conn:
             conn.execute(text('ALTER TABLE course ADD COLUMN icon VARCHAR(200)'))
-    # Initialize default editable pages
+    # Initialize or update basic pages with richer default text
     default_pages = {
-        "landing": "Welcome to Judaism Online!",
-        "about": "About us placeholder text.",
-        "contact": "Contact information placeholder.",
-        "faq": "Frequently asked questions placeholder.",
+        "landing": (
+            "Welcome to Judaism Online!\n\n"
+            "## Our Mission\n"
+            "Judaism Online is dedicated to making the wisdom of Judaism accessible to everyone. "
+            "Through free articles, engaging courses and a welcoming community, we provide reliable "
+            "resources for anyone curious about Jewish life and tradition.\n\n"
+            "## What You'll Find\n"
+            "- Weekly articles exploring Jewish thought and practice\n"
+            "- Self-paced courses for beginners and advanced students\n"
+            "- Resources geared toward those considering conversion\n"
+            "- An open community forum for questions and discussion\n\n"
+            "## Join Us\n"
+            "Subscribe to our newsletter and follow us on social media to hear about new lessons, "
+            "upcoming events and the latest happenings across the Jewish world.\n\n"
+            "## Featured Topics\n"
+            "From ancient biblical history to modern Jewish ethics, our articles cover a wide "
+            "spectrum of subjects that help deepen your understanding of faith and tradition.\n\n"
+            "## Stay Connected\n"
+            "Sign up for our monthly bulletin for curated resources, upcoming webinars and community "
+            "spotlights. We value your privacy and will never share your information."
+        ),
+        "about": (
+            "Judaism Online grew out of a passion for sharing authentic Jewish knowledge with anyone "
+            "seeking to learn. Our team brings together educators from diverse backgrounds to curate "
+            "approachable content rooted in classical sources.\n\n"
+            "The site offers weekly blog posts, carefully designed courses and news updates from across "
+            "the Jewish world. Whether you're exploring Judaism for the first time or deepening long-held "
+            "traditions, we aim to provide tools for meaningful growth.\n\n"
+            "**Get involved:**\n"
+            "- Read our latest [blog posts](/blog/) and share your thoughts.\n"
+            "- Enroll in our [online courses](/courses/) to learn at your own pace.\n"
+            "- Contact us with suggestions or questions — we welcome your feedback.\n\n"
+            "## Our Approach\n"
+            "We balance respect for tradition with an inclusive perspective. Every article and course is "
+            "reviewed to ensure accuracy while remaining accessible to readers from any background.\n\n"
+            "## Our History\n"
+            "Judaism Online began as a small newsletter shared among friends who loved studying Torah together. "
+            "Over the years it has grown into an online destination for learners around the world seeking clear "
+            "explanations and inspirational teachings.\n\n"
+            "## Meet the Team\n"
+            "Our contributors include rabbis, educators and passionate community members. Each writer brings a "
+            "unique voice while sharing the same goal: to make Jewish wisdom approachable and engaging for everyone."
+        ),
+        "contact": (
+            "We would love to hear from you. For general inquiries please email "
+            "[info@judaismonline.example](mailto:info@judaismonline.example). "
+            "You can also reach us on social media or by using the form below.\n\n"
+            "**Mailing address:**\n"
+            "Judaism Online\n"
+            "123 Learning Lane\n"
+            "Springfield, USA\n\n"
+            "Follow us on your favorite social media platforms for the latest articles and community discussions. "
+            "You can find us on Facebook, Instagram and Twitter under the username **@JudaismOnline**.\n\n"
+            "We try to respond to all messages within two business days. Your questions and suggestions help us "
+            "improve the site for everyone."
+        ),
+        "faq": (
+            "### What is Judaism Online?\n"
+            "Judaism Online is a free educational site offering articles, classes and news about Jewish life and tradition.\n\n"
+            "### Do I need any prior knowledge?\n"
+            "No prior background is required. Our beginner courses are designed for newcomers and those exploring conversion.\n\n"
+            "### Is the content free?\n"
+            "Yes. All articles and courses currently published on Judaism Online are available at no cost.\n\n"
+            "### Can I suggest a topic?\n"
+            "Absolutely! We welcome new ideas for articles and lessons. Use the contact form to send us your suggestions.\n\n"
+            "### How often is new content added?\n"
+            "We post new blog entries weekly and regularly expand our course offerings throughout the year.\n\n"
+            "### How do I enroll in a course?\n"
+            "Browse our course catalog and click the enrollment link on the course page. You'll receive email instructions for "
+            "accessing lessons and tracking your progress.\n\n"
+            "### Do you host live events?\n"
+            "Yes. We periodically offer webinars and virtual Q&A sessions with guest teachers. Event details are posted on our "
+            "homepage and social media channels."
+        ),
     }
     for slug, content in default_pages.items():
         page = Page.query.filter_by(slug=slug).first()
         if page is None:
             db.session.add(Page(slug=slug, title=slug.capitalize(), content=content))
+        else:
+            page.content = content
     db.session.commit()
 
 
@@ -217,10 +297,19 @@ def about():
     return render_template("page.html", page=page)
 
 
-@app.route("/contact/")
+@app.route("/contact/", methods=["GET", "POST"])
 def contact():
     page = Page.query.filter_by(slug="contact").first()
-    return render_template("page.html", page=page)
+    sent = False
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        message = request.form.get("message", "").strip()
+        if message:
+            db.session.add(ContactMessage(name=name, email=email, message=message))
+            db.session.commit()
+            sent = True
+    return render_template("contact.html", page=page, sent=sent)
 
 
 @app.route("/faq/")
