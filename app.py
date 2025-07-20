@@ -212,17 +212,58 @@ def generate_blog_post() -> tuple[str, str]:
     return title, content
 
 
+def parse_json_response(text: str):
+    """Try to parse JSON from a model response."""
+    import json
+    import re
+
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    # Extract JSON from within a Markdown style code block
+    match = re.search(r"```(?:json)?\n(.*?)```", text, re.DOTALL)
+    if match:
+        snippet = match.group(1)
+        try:
+            return json.loads(snippet)
+        except Exception:
+            pass
+
+    # Fallback: grab first JSON-looking portion
+    match = re.search(r"[{\[].*[}\]]", text, re.DOTALL)
+    if match:
+        snippet = match.group(0)
+        try:
+            return json.loads(snippet)
+        except Exception:
+            pass
+    return None
+
+
+def clean_module_content(html: str, title: str) -> str:
+    """Remove extraneous text and add a heading if missing."""
+    import re
+
+    # Remove references to next modules that the model occasionally adds
+    html = re.sub(r"(?i)next module.*", "", html)
+
+    # Ensure the module starts with a heading matching the title
+    if title and not re.search(r"<h\d", html):
+        html = f"<h2>{title}</h2>\n" + html
+
+    return html.strip()
+
+
 def generate_section_titles(topic: str, count: int = 3):
     """Return a list of module titles for the course."""
     prompt = (
         f"Provide {count} concise module titles for a course about {topic}. "
         "Respond in JSON as a simple list of strings."
     )
-    import json
-    try:
-        data = json.loads(generate_text(prompt))
-    except Exception:
-        data = []
+    data = parse_json_response(generate_text(prompt)) or []
     titles = [str(t) for t in data][:count]
     if not titles:
         titles = [f"Module {i}" for i in range(1, count + 1)]
@@ -235,7 +276,8 @@ def generate_module_content(course_topic: str, module_title: str) -> str:
         f"Write an in-depth lesson in HTML format for a course about {course_topic}. "
         f"The module is titled '{module_title}'."
     )
-    return generate_text(prompt).strip()
+    content = generate_text(prompt).strip()
+    return clean_module_content(content, module_title)
 
 
 def generate_course_sections(topic: str, count: int = 3):
@@ -255,10 +297,8 @@ def generate_quiz_questions(topic: str, count: int = 10):
         "Provide options A, B, C and D and the correct answer letter. "
         "Respond in JSON with a list of objects having 'question', 'a', 'b', 'c', 'd' and 'answer'."
     )
-    import json
-    try:
-        data = json.loads(generate_text(prompt))
-    except Exception:
+    data = parse_json_response(generate_text(prompt))
+    if not data:
         return []
     questions = []
     for i, item in enumerate(data, 1):
