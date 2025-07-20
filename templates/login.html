@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Admin Login</h1>
-<form method="post">
+<h1 data-aos="fade-down">Admin Login</h1>
+<form method="post" data-aos="fade-up">
   <div class="mb-3">
     <input type="password" class="form-control" name="password" placeholder="Password"/>
   </div>
-  <button class="btn btn-primary" type="submit">Login</button>
+  <button class="btn btn-primary" type="submit"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</button>
 </form>
 {% endblock %}

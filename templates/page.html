@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h1>{{ page.title }}</h1>
-  <div>{{ page.content|markdown|safe }}</div>
+  <h1 data-aos="fade-down">{{ page.title }}</h1>
+  <div data-aos="fade-up">{{ page.content|markdown|safe }}</div>
+  <img src="{{ url_for('static', filename=page.slug + '.jpg') }}" alt="{{ page.title }} image" class="img-fluid my-4" data-aos="zoom-in">
 {% endblock %}
