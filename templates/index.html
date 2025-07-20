@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="p-5 mb-4 bg-light rounded-3">
-    <div class="container-fluid py-5">
-      <h1 class="display-5 fw-bold">{{ page.title }}</h1>
-      <div class="col-md-8 fs-4">{{ page.content|markdown|safe }}</div>
-    </div>
+  <div class="hero text-center text-white mb-4">
+    <h1 class="display-4" data-aos="fade-down">{{ page.title }}</h1>
+    <p class="lead mb-3" data-aos="fade-up">Explore articles and courses to deepen your understanding.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('courses') }}" data-aos="zoom-in">Browse Courses</a>
+  </div>
+  <div data-aos="fade-up">
+    {{ page.content|markdown|safe }}
   </div>
 {% endblock %}

@@ -1,20 +1,62 @@
-.course-card { margin-bottom: 2rem; }
+.course-card {
+  margin-bottom: 2rem;
+  border: none;
+  border-radius: .5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
 .course-card img { height: 200px; object-fit: cover; }
 
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap');
+
 body {
-  background-color: #f8f9fa;
+  background: linear-gradient(to right, #f2f7fd, #ffffff);
   color: #333;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Open Sans', sans-serif;
+}
+
+h1, h2, .navbar-brand {
+  font-family: 'Merriweather', serif;
+}
+
+.navbar {
+  background-color: #343a40 !important;
+}
+.navbar .nav-link,
+.navbar .navbar-brand {
+  color: #f8f9fa !important;
+}
+.navbar .nav-link:hover {
+  color: #ffdd57 !important;
 }
 
 .hero {
-  background-color: #007bff;
+  background: url('/static/hero.jpg') center/cover no-repeat;
   color: #fff;
-  padding: 4rem 2rem;
+  padding: 5rem 2rem;
   text-align: center;
   margin-bottom: 2rem;
+  position: relative;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .section-heading {
   color: #0056b3;
+  border-bottom: 2px solid #ffdd57;
+  padding-bottom: .5rem;
+  margin-bottom: 1rem;
 }

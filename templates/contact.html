@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h1>{{ page.title }}</h1>
-  <div>{{ page.content|markdown|safe }}</div>
+  <h1 data-aos="fade-down">{{ page.title }}</h1>
+  <div data-aos="fade-up">{{ page.content|markdown|safe }}</div>
   {% if sent %}
     <div class="alert alert-success mt-3">Thank you for your message!</div>
   {% endif %}
-  <form class="mt-4" method="post">
+  <form class="mt-4" method="post" data-aos="fade-up">
     <div class="mb-3">
       <label class="form-label" for="name">Name</label>
       <input type="text" class="form-control" id="name" name="name" placeholder="Your name">
@@ -18,7 +18,7 @@
       <label class="form-label" for="message">Message</label>
       <textarea class="form-control" id="message" name="message" rows="4" placeholder="How can we help?"></textarea>
     </div>
-    <button type="submit" class="btn btn-primary">Send</button>
+    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1"></i>Send</button>
   </form>
-  <img src="{{ url_for('static', filename='contact.jpg') }}" alt="Contact us" class="img-fluid my-4">
+  <img src="{{ url_for('static', filename='contact.jpg') }}" alt="Contact us" class="img-fluid my-4" data-aos="zoom-in">
 {% endblock %}
