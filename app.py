@@ -24,6 +24,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import inspect, text
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import subprocess
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -850,6 +851,12 @@ def admin():
             if page:
                 page.content = content
                 db.session.commit()
+        elif action == "push":
+            subprocess.run(["python", "freeze.py"], check=True)
+            subprocess.run(["git", "add", "docs"], check=True)
+            msg = f"Update site {datetime.date.today().isoformat()}"
+            subprocess.run(["git", "commit", "-m", msg])
+            subprocess.run(["git", "push"])
         return redirect(url_for("admin"))
     pages = Page.query.all()
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
