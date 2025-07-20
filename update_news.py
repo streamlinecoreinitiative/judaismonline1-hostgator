@@ -16,6 +16,15 @@ def fetch_news():
         if not NewsItem.query.filter_by(url=url).first():
             db.session.add(NewsItem(title=title, url=url, summary=summary))
     db.session.commit()
+    old_items = (
+        NewsItem.query.order_by(NewsItem.created_at.desc())
+        .offset(25)
+        .all()
+    )
+    for item in old_items:
+        db.session.delete(item)
+    if old_items:
+        db.session.commit()
 
 if __name__ == "__main__":
     # Use an application context so SQLAlchemy can access the database

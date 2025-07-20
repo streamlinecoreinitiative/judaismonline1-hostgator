@@ -3,7 +3,11 @@
 <h1 data-aos="fade-down">News</h1>
 <ul data-aos="fade-up">
 {% for item in items %}
-  <li><a href="{{ item.url }}" target="_blank">{{ item.title }}</a></li>
+  <li>
+    <small class="text-muted">{{ item.created_at.strftime('%Y-%m-%d') }}</small>
+    <br>
+    <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+  </li>
 {% else %}
   <li>No news yet.</li>
 {% endfor %}
