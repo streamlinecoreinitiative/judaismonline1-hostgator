@@ -26,15 +26,18 @@
       {% endfor %}
     </ul>
     {% endif %}
-    {% if all_done %}
-      {% if quiz_passed %}
+      {% if all_done and quiz_passed %}
         <a class="btn btn-success mt-3" href="{{ url_for('certificate', course_id=course.id) }}">Download Course Completion</a>
-      {% else %}
+      {% elif all_done %}
         <a class="btn btn-primary mt-3" href="{{ url_for('course_quiz', course_id=course.id) }}">Take Final Quiz</a>
+        <p class="text-muted mt-2">Score at least 80% to unlock the certificate.</p>
+      {% else %}
+        <p class="mt-3 text-muted">Complete all modules and pass the quiz with at least 80% to download your certificate.</p>
       {% endif %}
-    {% else %}
-      <p class="mt-3 text-muted">The button will be enabled once you complete all modules and acknowledge you have read them.</p>
-    {% endif %}
+      <p class="mt-2">
+        {% if all_done %}<span class="text-success"><i class="fa-solid fa-check me-1"></i>Modules completed</span>{% else %}<span class="text-danger"><i class="fa-solid fa-xmark me-1"></i>Modules incomplete</span>{% endif %}
+        {% if quiz_passed %}<span class="text-success ms-3"><i class="fa-solid fa-check me-1"></i>Quiz passed</span>{% else %}<span class="text-danger ms-3"><i class="fa-solid fa-xmark me-1"></i>Quiz not passed</span>{% endif %}
+      </p>
   </div>
 </div>
 {% endblock %}
