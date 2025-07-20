@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1>{{ page.title }}</h1>
+  <div>{{ page.content|markdown|safe }}</div>
+  {% if sent %}
+    <div class="alert alert-success mt-3">Thank you for your message!</div>
+  {% endif %}
+  <form class="mt-4" method="post">
+    <div class="mb-3">
+      <label class="form-label" for="name">Name</label>
+      <input type="text" class="form-control" id="name" name="name" placeholder="Your name">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="email">Email</label>
+      <input type="email" class="form-control" id="email" name="email" placeholder="your@email.example">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="message">Message</label>
+      <textarea class="form-control" id="message" name="message" rows="4" placeholder="How can we help?"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Send</button>
+  </form>
+  <img src="{{ url_for('static', filename='contact.jpg') }}" alt="Contact us" class="img-fluid my-4">
+{% endblock %}
