@@ -7,6 +7,7 @@ import shutil
 
 app.config['FREEZER_DESTINATION'] = 'docs'
 app.config['GENERATING_STATIC'] = True
+app.config['SHOW_LOGIN'] = False
 app.config['FREEZER_IGNORE_URLS'] = [
     re.compile(r'/admin'),
     re.compile(r'/login'),

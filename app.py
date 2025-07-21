@@ -24,12 +24,14 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import inspect, text
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import subprocess
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['GENERATING_STATIC'] = False
+app.config['SHOW_LOGIN'] = True
 app.secret_key = os.environ.get('SECRET_KEY', 'secret')
 db = SQLAlchemy(app)
 
@@ -334,7 +336,11 @@ def generate_quiz_questions(topic: str, count: int = 10):
         "Provide options A, B, C and D and the correct answer letter. "
         "Respond in JSON with a list of objects having 'question', 'a', 'b', 'c', 'd' and 'answer'."
     )
-    data = parse_json_response(generate_text(prompt))
+    data = None
+    for _ in range(3):
+        data = parse_json_response(generate_text(prompt))
+        if data:
+            break
     if not data:
         return []
     questions = []
@@ -823,6 +829,22 @@ def admin():
             q = QuizQuestion.query.get_or_404(request.form.get("id"))
             db.session.delete(q)
             db.session.commit()
+        elif action == "generate_questions":
+            course = Course.query.get_or_404(request.form.get("id"))
+            QuizQuestion.query.filter_by(course_id=course.id).delete()
+            for q in generate_quiz_questions(course.title, 10):
+                question = QuizQuestion(
+                    course_id=course.id,
+                    question=q["question"],
+                    option_a=q["a"],
+                    option_b=q["b"],
+                    option_c=q["c"],
+                    option_d=q["d"],
+                    answer=q["answer"],
+                    order=q["order"],
+                )
+                db.session.add(question)
+            db.session.commit()
         elif action == "fetch_news":
             fetch_news_items()
         elif action == "create_news":
@@ -849,6 +871,12 @@ def admin():
             if page:
                 page.content = content
                 db.session.commit()
+        elif action == "push":
+            subprocess.run(["python", "freeze.py"], check=True)
+            subprocess.run(["git", "add", "docs"], check=True)
+            msg = f"Update site {datetime.date.today().isoformat()}"
+            subprocess.run(["git", "commit", "-m", msg])
+            subprocess.run(["git", "push"])
         return redirect(url_for("admin"))
     pages = Page.query.all()
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
