@@ -113,6 +113,11 @@
           <button class="btn btn-danger" type="submit">Delete</button>
         </form>
         {% endfor %}
+        <form method="post" class="mb-4 show-spinner">
+          <input type="hidden" name="action" value="generate_questions">
+          <input type="hidden" name="id" value="{{ c.id }}">
+          <button class="btn btn-primary" type="submit">Regenerate Quiz</button>
+        </form>
         {% endfor %}
       </div>
     </div>

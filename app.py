@@ -336,21 +336,13 @@ def generate_quiz_questions(topic: str, count: int = 10):
         "Provide options A, B, C and D and the correct answer letter. "
         "Respond in JSON with a list of objects having 'question', 'a', 'b', 'c', 'd' and 'answer'."
     )
-    data = parse_json_response(generate_text(prompt))
+    data = None
+    for _ in range(3):
+        data = parse_json_response(generate_text(prompt))
+        if data:
+            break
     if not data:
-        # Fallback so courses always have some quiz content
-        return [
-            {
-                "question": f"Placeholder question {i} about {topic}?",
-                "a": "A",
-                "b": "B",
-                "c": "C",
-                "d": "D",
-                "answer": "A",
-                "order": i,
-            }
-            for i in range(1, count + 1)
-        ]
+        return []
     questions = []
     for i, item in enumerate(data, 1):
         questions.append({
@@ -836,6 +828,22 @@ def admin():
         elif action == "delete_question":
             q = QuizQuestion.query.get_or_404(request.form.get("id"))
             db.session.delete(q)
+            db.session.commit()
+        elif action == "generate_questions":
+            course = Course.query.get_or_404(request.form.get("id"))
+            QuizQuestion.query.filter_by(course_id=course.id).delete()
+            for q in generate_quiz_questions(course.title, 10):
+                question = QuizQuestion(
+                    course_id=course.id,
+                    question=q["question"],
+                    option_a=q["a"],
+                    option_b=q["b"],
+                    option_c=q["c"],
+                    option_d=q["d"],
+                    answer=q["answer"],
+                    order=q["order"],
+                )
+                db.session.add(question)
             db.session.commit()
         elif action == "fetch_news":
             fetch_news_items()
