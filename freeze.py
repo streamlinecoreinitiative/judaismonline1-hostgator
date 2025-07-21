@@ -1,8 +1,22 @@
+import os
+import subprocess
+import sys
+
+# Ensure required packages are available. This helps when the freeze command
+# is triggered from environments that may not have the project's dependencies
+# installed (for example from the admin "push" button).
+try:
+    from flask import Flask  # noqa: F401 - check only for import
+    from flask_sqlalchemy import SQLAlchemy  # noqa: F401
+    from flask_frozen import Freezer
+except ImportError:
+    req_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
+    subprocess.run([sys.executable, "-m", "pip", "install", "-r", req_file], check=True)
+    from flask_frozen import Freezer
+
 from app import app, Course, CourseSection, QuizQuestion, create_tables
-from flask_frozen import Freezer
 
 import re
-import os
 import shutil
 
 app.config['FREEZER_DESTINATION'] = 'docs'
