@@ -282,8 +282,8 @@ def clean_module_content(html: str, title: str) -> str:
     """Remove extraneous text and add a heading if missing."""
     import re
 
-    # Remove references to next modules that the model occasionally adds
-    html = re.sub(r"(?i)next module.*", "", html)
+    # Remove references to other modules that the model occasionally adds
+    html = re.sub(r"(?i)(next\s+module|module\s+\d+).*", "", html)
 
     # Strip any leading mentions of HTML or "HTML Lesson" phrases
     html = re.sub(r"(?i)^\s*HTML(?:\s*Lesson)?\s*[:\-]?\s*", "", html)
@@ -311,10 +311,13 @@ def generate_section_titles(topic: str, count: int = 3):
 def generate_module_content(course_topic: str, module_title: str) -> str:
     """Generate detailed HTML content for a single module."""
     prompt = (
-        f"Write an in-depth lesson formatted in HTML for a course about {course_topic}. "
-        f"The module is titled '{module_title}'. Respond only with the HTML markup "
-        "for the lesson and do not mention that it is HTML."
-    )
+        f"Write a lesson for a course about {course_topic}. "
+        f"The module title is '{module_title}'. "
+        "Format the response in HTML using a consistent structure: "
+        "<h2>{module_title}</h2> as the heading, followed by a section titled 'Introduction', "
+        "a section titled 'Main Content' covering the topic, and a final section titled 'Conclusion' summarizing the key points. "
+        "Do not reference any other modules and respond only with the HTML markup."
+    ).format(module_title=module_title)
     content = generate_text(prompt).strip()
     return clean_module_content(content, module_title)
 
@@ -334,7 +337,8 @@ def generate_quiz_questions(topic: str, count: int = 10):
     prompt = (
         f"Create {count} multiple choice quiz questions summarizing key points about {topic}. "
         "Provide options A, B, C and D and the correct answer letter. "
-        "Respond in JSON with a list of objects having 'question', 'a', 'b', 'c', 'd' and 'answer'."
+        "Respond only with valid JSON. The JSON must be a list of objects each containing "
+        "'question', 'a', 'b', 'c', 'd' and 'answer'. Do not include any explanation or formatting outside the JSON."
     )
     data = None
     for _ in range(3):
