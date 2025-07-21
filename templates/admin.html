@@ -135,6 +135,7 @@
           <input type="hidden" name="action" value="fetch_news">
           <button class="btn btn-primary" type="submit">Fetch Latest News</button>
         </form>
+        <p class="text-muted">Last fetch: {{ last_news_fetch or 'never' }}</p>
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="create_news">
           <input type="text" name="title" class="form-control mb-1" placeholder="Title">

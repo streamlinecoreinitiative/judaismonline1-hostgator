@@ -27,26 +27,27 @@ from reportlab.pdfgen import canvas
 import subprocess
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
-app.config['GENERATING_STATIC'] = False
-app.config['SHOW_LOGIN'] = True
-app.secret_key = os.environ.get('SECRET_KEY', 'secret')
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///site.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
+app.config["GENERATING_STATIC"] = False
+app.config["SHOW_LOGIN"] = True
+app.secret_key = os.environ.get("SECRET_KEY", "secret")
 db = SQLAlchemy(app)
 
 # Encryption key used to protect personal information
-_key = os.environ.get('ENCRYPT_KEY')
+_key = os.environ.get("ENCRYPT_KEY")
 if not _key:
     _key = Fernet.generate_key()
 fernet = Fernet(_key)
 
 
 # Markdown filter to render AI-generated text nicely
-@app.template_filter('markdown')
+@app.template_filter("markdown")
 def markdown_filter(text: str) -> str:
     """Convert Markdown text to HTML."""
-    return markdown(text or '')
+    return markdown(text or "")
+
 
 # Simple helpers to encrypt and decrypt text
 def encrypt(text: str) -> bytes:
@@ -57,7 +58,7 @@ def encrypt(text: str) -> bytes:
 
 def decrypt(token: bytes) -> str:
     if not token:
-        return ''
+        return ""
     return fernet.decrypt(token).decode()
 
 
@@ -87,7 +88,9 @@ class CourseSection(db.Model):
     answer = db.Column(db.String(200))
     order = db.Column(db.Integer)
 
-    course = db.relationship("Course", backref=db.backref("sections", order_by="CourseSection.order"))
+    course = db.relationship(
+        "Course", backref=db.backref("sections", order_by="CourseSection.order")
+    )
 
 
 class QuizQuestion(db.Model):
@@ -127,8 +130,6 @@ class ContactMessage(db.Model):
     email = db.Column(db.String(200))
     message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-
 
 
 class SiteSetting(db.Model):
@@ -171,9 +172,7 @@ def generate_text(prompt: str) -> str:
 
 # Only fetch posts from the "Religion" category to keep blog topics focused on
 # religious news.
-NEWS_API_URL = (
-    "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
-)
+NEWS_API_URL = "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
 
 
 def generate_blog_post() -> tuple[str, str]:
@@ -255,7 +254,9 @@ def generate_certificate_pdf(name: str, course: str, score: int) -> bytes:
     return buffer.read()
 
 
-def send_email(to_addr: str, subject: str, body: str, attachment: bytes | None = None) -> None:
+def send_email(
+    to_addr: str, subject: str, body: str, attachment: bytes | None = None
+) -> None:
     msg = EmailMessage()
     sender = get_setting("admin_email") or os.environ.get("ADMIN_EMAIL")
     if not sender:
@@ -265,7 +266,12 @@ def send_email(to_addr: str, subject: str, body: str, attachment: bytes | None =
     msg["Subject"] = subject
     msg.set_content(body)
     if attachment:
-        msg.add_attachment(attachment, maintype="application", subtype="pdf", filename="certificate.pdf")
+        msg.add_attachment(
+            attachment,
+            maintype="application",
+            subtype="pdf",
+            filename="certificate.pdf",
+        )
     server = os.environ.get("SMTP_SERVER")
     port = int(os.environ.get("SMTP_PORT", "587"))
     user = os.environ.get("SMTP_USER")
@@ -322,6 +328,19 @@ def generate_module_content(course_topic: str, module_title: str) -> str:
     return clean_module_content(content, module_title)
 
 
+def generate_course_overview(topic: str) -> str:
+    """Return an HTML overview for the course."""
+    prompt = (
+        f"Write a concise overview for a course about {topic}. "
+        "Format the response in HTML with three sections: "
+        "<h2>Introduction</h2> describing the course, "
+        "<h2>Main Content</h2> outlining what will be covered, and "
+        "<h2>Learning Expectations</h2> summarising the outcomes. "
+        "Do not mention how many modules the course has."
+    )
+    return generate_text(prompt).strip()
+
+
 def generate_course_sections(topic: str, count: int = 3):
     """Return a list of section dicts with title and content."""
     titles = generate_section_titles(topic, count)
@@ -349,15 +368,17 @@ def generate_quiz_questions(topic: str, count: int = 10):
         return []
     questions = []
     for i, item in enumerate(data, 1):
-        questions.append({
-            "question": item.get("question", ""),
-            "a": item.get("a", ""),
-            "b": item.get("b", ""),
-            "c": item.get("c", ""),
-            "d": item.get("d", ""),
-            "answer": item.get("answer", "").strip().upper(),
-            "order": i,
-        })
+        questions.append(
+            {
+                "question": item.get("question", ""),
+                "a": item.get("a", ""),
+                "b": item.get("b", ""),
+                "c": item.get("c", ""),
+                "d": item.get("d", ""),
+                "answer": item.get("answer", "").strip().upper(),
+                "order": i,
+            }
+        )
     return questions
 
 
@@ -373,28 +394,25 @@ def fetch_news_items() -> None:
             db.session.add(NewsItem(title=title, url=url, summary=summary))
     db.session.commit()
     # Keep only the 25 most recent items
-    old_items = (
-        NewsItem.query.order_by(NewsItem.created_at.desc())
-        .offset(25)
-        .all()
-    )
+    old_items = NewsItem.query.order_by(NewsItem.created_at.desc()).offset(25).all()
     for item in old_items:
         db.session.delete(item)
     if old_items:
         db.session.commit()
+    set_setting("last_news_fetch", datetime.datetime.utcnow().isoformat())
 
 
 def create_tables():
     """Create database tables if they don't exist."""
     db.create_all()
     # Ensure uploads folder exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     # Add icon column to Course if missing
     inspector = inspect(db.engine)
-    cols = [c['name'] for c in inspector.get_columns('course')]
-    if 'icon' not in cols:
+    cols = [c["name"] for c in inspector.get_columns("course")]
+    if "icon" not in cols:
         with db.engine.begin() as conn:
-            conn.execute(text('ALTER TABLE course ADD COLUMN icon VARCHAR(200)'))
+            conn.execute(text("ALTER TABLE course ADD COLUMN icon VARCHAR(200)"))
     # Initialize or update basic pages with richer default text
     default_pages = {
         "landing": (
@@ -547,11 +565,7 @@ def terms():
 
 @app.route("/news/")
 def news():
-    items = (
-        NewsItem.query.order_by(NewsItem.created_at.desc())
-        .limit(25)
-        .all()
-    )
+    items = NewsItem.query.order_by(NewsItem.created_at.desc()).limit(25).all()
     return render_template("news.html", items=items)
 
 
@@ -565,8 +579,6 @@ def login():
             session["logged_in"] = True
             return redirect(url_for("admin"))
     return render_template("login.html")
-
-
 
 
 @app.route("/logout/")
@@ -643,7 +655,9 @@ def course_full(course_id):
     return render_template("course_full.html", course=course, sections=sections)
 
 
-@app.route("/courses/<int:course_id>/section/<int:section_id>/", methods=["GET", "POST"])
+@app.route(
+    "/courses/<int:course_id>/section/<int:section_id>/", methods=["GET", "POST"]
+)
 def course_section(course_id, section_id):
     course = Course.query.get_or_404(course_id)
     section = CourseSection.query.get_or_404(section_id)
@@ -742,11 +756,7 @@ def admin():
                 icon_name = secure_filename(file.filename)
                 file.save(os.path.join(app.config["UPLOAD_FOLDER"], icon_name))
             if not description:
-                prompt = (
-                    f"Create a detailed, comprehensive course on {topic} for those interested in converting to Judaism. "
-                    f"Provide extensive explanations, historical context and practical guidance in HTML format so it can be displayed on a web page."
-                )
-                description = generate_text(prompt)
+                description = generate_course_overview(topic)
             course = Course(
                 title=topic,
                 description=description,
@@ -789,7 +799,9 @@ def admin():
             if request.form.get("remove_icon"):
                 if course.icon:
                     try:
-                        os.remove(os.path.join(app.config["UPLOAD_FOLDER"], course.icon))
+                        os.remove(
+                            os.path.join(app.config["UPLOAD_FOLDER"], course.icon)
+                        )
                     except Exception:
                         pass
                 course.icon = None
@@ -798,7 +810,9 @@ def admin():
                 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
                 if course.icon:
                     try:
-                        os.remove(os.path.join(app.config["UPLOAD_FOLDER"], course.icon))
+                        os.remove(
+                            os.path.join(app.config["UPLOAD_FOLDER"], course.icon)
+                        )
                     except Exception:
                         pass
                 icon_name = secure_filename(file.filename)
@@ -886,12 +900,14 @@ def admin():
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
     courses = Course.query.all()
     items = NewsItem.query.all()
+    last_fetch = get_setting("last_news_fetch")
     return render_template(
         "admin.html",
         pages=pages,
         posts=posts,
         courses=courses,
         items=items,
+        last_news_fetch=last_fetch,
     )
 
 
