@@ -1,5 +1,6 @@
 import datetime
 import os
+import sys
 from io import BytesIO
 import smtplib
 from email.message import EmailMessage
@@ -890,7 +891,7 @@ def admin():
                 page.content = content
                 db.session.commit()
         elif action == "push":
-            subprocess.run(["python", "freeze.py"], check=True)
+            subprocess.run([sys.executable, "freeze.py"], check=True)
             subprocess.run(["git", "add", "docs"], check=True)
             msg = f"Update site {datetime.date.today().isoformat()}"
             subprocess.run(["git", "commit", "-m", msg])
