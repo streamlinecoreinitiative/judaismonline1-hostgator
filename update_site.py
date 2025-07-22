@@ -1,10 +1,12 @@
 import datetime
 import subprocess
 
+import sys
+
 COMMANDS = [
-    ['python', 'daily_post.py'],
-    ['python', 'update_news.py'],
-    ['python', 'freeze.py'],
+    [sys.executable, 'daily_post.py'],
+    [sys.executable, 'update_news.py'],
+    [sys.executable, 'freeze.py'],
 ]
 
 def run(cmd):
