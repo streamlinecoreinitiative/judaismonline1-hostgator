@@ -19,6 +19,7 @@ from flask_sqlalchemy import SQLAlchemy
 from cryptography.fernet import Fernet
 import ollama
 from markdown import markdown
+from bs4 import BeautifulSoup
 import random
 import requests
 from werkzeug.utils import secure_filename
@@ -32,7 +33,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///site.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
 app.config["GENERATING_STATIC"] = False
-app.config["SHOW_LOGIN"] = True
+app.config["SHOW_LOGIN"] = os.environ.get("SHOW_LOGIN") == "1"
 app.secret_key = os.environ.get("SECRET_KEY", "secret")
 db = SQLAlchemy(app)
 
@@ -46,8 +47,9 @@ fernet = Fernet(_key)
 # Markdown filter to render AI-generated text nicely
 @app.template_filter("markdown")
 def markdown_filter(text: str) -> str:
-    """Convert Markdown text to HTML."""
-    return markdown(text or "")
+    """Convert Markdown text to sanitized HTML."""
+    html = markdown(text or "", extensions=["extra"])
+    return str(BeautifulSoup(html, "html.parser"))
 
 
 # Simple helpers to encrypt and decrypt text

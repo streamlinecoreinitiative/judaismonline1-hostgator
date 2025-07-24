@@ -16,8 +16,7 @@ def run(cmd):
 if __name__ == '__main__':
     for cmd in COMMANDS:
         run(cmd)
-    run(['git', 'add', 'docs'])
-    msg = f"Update site {datetime.date.today().isoformat()}"
-    run(['git', 'commit', '-m', msg])
-    run(['git', 'push'])
+    print(
+        "Site content updated locally. Use the admin 'Push to GitHub' button to publish."
+    )
 

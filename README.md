@@ -15,11 +15,12 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - Full course pages display all sections together using a modern accordion layout.
 - News section populated from the JTA API (`update_news.py`). The admin page
   shows when the news was last fetched.
-- Optional `update_site.py` script automates creating posts, freezing the site
-  and pushing updates to GitHub.
-- Login and admin pages are only available when running the Flask app locally
-  and are excluded from the static site. The navigation bar hides the related
-  buttons when pages are frozen so they won't appear on GitHub Pages.
+- Optional `update_site.py` script can generate posts, update the news section
+  and freeze the site. It no longer pushes updates automatically so the site is
+  only published when you manually push changes.
+- Login and admin pages are only available when the environment variable
+  `SHOW_LOGIN=1` is set while running the Flask app. They are excluded from the
+  static site, so visitors on GitHub Pages will never see the login button.
 
 ## Setup
 
@@ -86,11 +87,10 @@ served from that sub-path. After generating or editing content locally, run
 `python freeze.py` and push the updated `docs/` directory to trigger the
 deployment workflow.
 
-`update_site.py` provides a simple way to automate this process locally. It
-creates new posts, freezes the site and pushes the result in a single command.
-Run this script daily using your operating system's scheduler (e.g. `cron`).
-Schedule it about an hour after your daily content generation so all new blog
-posts and news items are included before the static site is pushed to GitHub.
+`update_site.py` provides a simple way to generate posts, fetch news and freeze
+the site in one command. It leaves the updated files in your repository so you
+can review them and push when ready using the admin "Push to GitHub" button (or
+your own `git` commands).
 
 Other static hosting platforms such as Netlify or Vercel can be used if you
 prefer. Any service capable of serving the generated `docs/` directory will
