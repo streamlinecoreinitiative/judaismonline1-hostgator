@@ -4,5 +4,6 @@ ollama
 Frozen-Flask
 requests
 markdown
+beautifulsoup4
 cryptography
 reportlab
