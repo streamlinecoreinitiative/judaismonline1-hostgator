@@ -65,6 +65,9 @@ Placeholder images used by the templates can be replaced in `static/`:
 - `faq.jpg`
 - `news.jpg`
 
+These can also be uploaded or replaced from the admin "Images" section
+without editing the repository manually.
+
 Set the admin password using the `ADMIN_PASSWORD` environment variable (defaults to `admin`).
 
 ## Deployment to GitHub Pages

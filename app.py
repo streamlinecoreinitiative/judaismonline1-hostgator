@@ -885,6 +885,22 @@ def admin():
             item = NewsItem.query.get_or_404(request.form.get("id"))
             db.session.delete(item)
             db.session.commit()
+        elif action == "upload_image":
+            slug = secure_filename(request.form.get("slug", ""))
+            allowed = [p.slug for p in Page.query.all()] + ["hero"]
+            if slug in allowed:
+                file = request.files.get("image")
+                if file and file.filename:
+                    os.makedirs("static", exist_ok=True)
+                    path = os.path.join("static", f"{slug}.jpg")
+                    file.save(path)
+        elif action == "delete_image":
+            slug = secure_filename(request.form.get("slug", ""))
+            allowed = [p.slug for p in Page.query.all()] + ["hero"]
+            if slug in allowed:
+                path = os.path.join("static", f"{slug}.jpg")
+                if os.path.exists(path):
+                    os.remove(path)
         elif action == "page":
             slug = request.form.get("slug")
             content = request.form.get("content", "")
