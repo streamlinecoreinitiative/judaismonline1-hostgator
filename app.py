@@ -385,6 +385,66 @@ def generate_quiz_questions(topic: str, count: int = 10):
     return questions
 
 
+def generate_course_topics(topic: str, count: int = 3) -> list[str]:
+    """Return a list of course titles related to ``topic``."""
+    prompt = (
+        f"Provide {count} concise course titles related to {topic}. "
+        "Respond in JSON as a simple list of strings."
+    )
+    data = parse_json_response(generate_text(prompt)) or []
+    titles = [str(t) for t in data][:count]
+    if not titles:
+        titles = [f"{topic} Course {i}" for i in range(1, count + 1)]
+    return titles
+
+
+def create_course(
+    title: str,
+    *,
+    module_count: int = 3,
+    difficulty: str = "Beginner",
+    prerequisites: str = "",
+    description: str | None = None,
+    icon: str | None = None,
+) -> Course:
+    """Create a course with modules and quiz questions."""
+    if not description:
+        description = generate_course_overview(title)
+    course = Course(
+        title=title,
+        description=description,
+        difficulty=difficulty,
+        prerequisites=prerequisites,
+        icon=icon,
+    )
+    db.session.add(course)
+    db.session.commit()
+
+    for sec in generate_course_sections(title, module_count):
+        section = CourseSection(
+            course_id=course.id,
+            title=sec["title"],
+            content=sec["content"],
+            order=sec["order"],
+        )
+        db.session.add(section)
+
+    for q in generate_quiz_questions(title, 10):
+        question = QuizQuestion(
+            course_id=course.id,
+            question=q["question"],
+            option_a=q["a"],
+            option_b=q["b"],
+            option_c=q["c"],
+            option_d=q["d"],
+            answer=q["answer"],
+            order=q["order"],
+        )
+        db.session.add(question)
+    db.session.commit()
+    return course
+
+
 def fetch_news_items() -> None:
     """Fetch latest news from the API and store new items."""
     resp = requests.get(NEWS_API_URL, timeout=10)
