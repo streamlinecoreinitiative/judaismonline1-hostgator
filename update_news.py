@@ -1,13 +1,11 @@
 import requests
-from app import db, NewsItem
+from app import db, NewsItem, get_setting, DEFAULT_NEWS_API_URL
 
-# Restrict to the Religion category so only faith-related news is stored.
-API_URL = (
-    "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
-)
+# Default feed used if no custom URL is configured.
 
 def fetch_news():
-    resp = requests.get(API_URL, timeout=10)
+    api_url = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
+    resp = requests.get(api_url, timeout=10)
     resp.raise_for_status()
     for item in resp.json():
         title = item.get("title", {}).get("rendered", "")
