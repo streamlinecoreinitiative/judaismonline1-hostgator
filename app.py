@@ -173,16 +173,19 @@ def generate_text(prompt: str) -> str:
     return "".join(chunk["message"]["content"] for chunk in stream)
 
 
-# Only fetch posts from the "Religion" category to keep blog topics focused on
-# religious news.
-NEWS_API_URL = "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
+# Default feed for the news section. Individual deployments can override this
+# via the admin settings form.
+DEFAULT_NEWS_API_URL = (
+    "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
+)
 
 
 def generate_blog_post() -> tuple[str, str]:
-    """Create a blog post and return a `(title, content)` tuple."""
+    """Create a blog post and return a ``(title, content)`` tuple."""
     topic = None
+    news_api = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
     try:
-        resp = requests.get(NEWS_API_URL, timeout=10)
+        resp = requests.get(news_api, timeout=10)
         resp.raise_for_status()
         items = resp.json()
         if items:
@@ -190,16 +193,17 @@ def generate_blog_post() -> tuple[str, str]:
     except Exception:
         topic = None
 
+    site_topic = get_setting("site_topic", "Judaism")
     date = datetime.datetime.utcnow().strftime("%B %d, %Y")
     if topic:
         prompt = (
-            f"Write a short blog post about Judaism inspired by this news topic: {topic}. "
+            f"Write a short blog post about {site_topic} inspired by this news topic: {topic}. "
             f"Include today's date ({date}) in the text and do not mention the day of the week. "
             "Start with a concise title summarizing the post on the first line, followed by a blank line and then the body."
         )
     else:
         prompt = (
-            f"Write a short blog post about an aspect of Judaism. "
+            f"Write a short blog post about an aspect of {site_topic}. "
             f"Include today's date ({date}) in the text and do not mention the day of the week. "
             "Start with a concise title summarizing the post on the first line, followed by a blank line and then the body."
         )
@@ -447,7 +451,8 @@ def create_course(
 
 def fetch_news_items() -> None:
     """Fetch latest news from the API and store new items."""
-    resp = requests.get(NEWS_API_URL, timeout=10)
+    news_api = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
+    resp = requests.get(news_api, timeout=10)
     resp.raise_for_status()
     for item in resp.json():
         title = item.get("title", {}).get("rendered", "")
@@ -573,6 +578,10 @@ def create_tables():
     db.session.commit()
     if not get_setting("admin_email") and os.environ.get("ADMIN_EMAIL"):
         set_setting("admin_email", os.environ.get("ADMIN_EMAIL"))
+    if not get_setting("site_topic"):
+        set_setting("site_topic", "Judaism")
+    if not get_setting("news_api_url"):
+        set_setting("news_api_url", DEFAULT_NEWS_API_URL)
 
 
 @app.route("/")
@@ -945,6 +954,9 @@ def admin():
             item = NewsItem.query.get_or_404(request.form.get("id"))
             db.session.delete(item)
             db.session.commit()
+        elif action == "update_settings":
+            set_setting("site_topic", request.form.get("site_topic", "").strip())
+            set_setting("news_api_url", request.form.get("news_api_url", "").strip())
         elif action == "upload_image":
             slug = secure_filename(request.form.get("slug", ""))
             allowed = [p.slug for p in Page.query.all()] + ["hero"]
@@ -980,6 +992,8 @@ def admin():
     courses = Course.query.all()
     items = NewsItem.query.all()
     last_fetch = get_setting("last_news_fetch")
+    site_topic = get_setting("site_topic", "Judaism")
+    news_api_url = get_setting("news_api_url", DEFAULT_NEWS_API_URL)
     return render_template(
         "admin.html",
         pages=pages,
@@ -987,6 +1001,8 @@ def admin():
         courses=courses,
         items=items,
         last_news_fetch=last_fetch,
+        site_topic=site_topic,
+        news_api_url=news_api_url,
     )
 
 
