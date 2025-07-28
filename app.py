@@ -84,7 +84,11 @@ class Course(db.Model):
 
 class CourseSection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    course_id = db.Column(
+        db.Integer,
+        db.ForeignKey("course.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     question = db.Column(db.Text)
@@ -92,13 +96,22 @@ class CourseSection(db.Model):
     order = db.Column(db.Integer)
 
     course = db.relationship(
-        "Course", backref=db.backref("sections", order_by="CourseSection.order")
+        "Course",
+        backref=db.backref(
+            "sections",
+            order_by="CourseSection.order",
+            cascade="all, delete-orphan",
+        ),
     )
 
 
 class QuizQuestion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    course_id = db.Column(
+        db.Integer,
+        db.ForeignKey("course.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     question = db.Column(db.Text, nullable=False)
     option_a = db.Column(db.String(200))
     option_b = db.Column(db.String(200))
@@ -108,7 +121,12 @@ class QuizQuestion(db.Model):
     order = db.Column(db.Integer)
 
     course = db.relationship(
-        "Course", backref=db.backref("quiz_questions", order_by="QuizQuestion.order")
+        "Course",
+        backref=db.backref(
+            "quiz_questions",
+            order_by="QuizQuestion.order",
+            cascade="all, delete-orphan",
+        ),
     )
 
 
@@ -953,6 +971,12 @@ def admin():
         elif action == "delete_news":
             item = NewsItem.query.get_or_404(request.form.get("id"))
             db.session.delete(item)
+            db.session.commit()
+        elif action == "clear_ai_content":
+            BlogPost.query.delete()
+            NewsItem.query.delete()
+            for course in Course.query.all():
+                db.session.delete(course)
             db.session.commit()
         elif action == "update_settings":
             set_setting("site_topic", request.form.get("site_topic", "").strip())

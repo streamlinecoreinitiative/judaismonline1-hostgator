@@ -243,6 +243,21 @@
       </div>
     </div>
   </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingDanger">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDanger" aria-expanded="false" aria-controls="collapseDanger">
+        Danger Zone
+      </button>
+    </h2>
+    <div id="collapseDanger" class="accordion-collapse collapse" aria-labelledby="headingDanger" data-bs-parent="#adminAccordion">
+      <div class="accordion-body">
+        <form method="post" onsubmit="return confirm('Delete all AI generated content?');">
+          <input type="hidden" name="action" value="clear_ai_content">
+          <button class="btn btn-danger" type="submit">Delete All AI Content</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 <form method="post" class="mb-4 show-spinner">
   <input type="hidden" name="action" value="push">
