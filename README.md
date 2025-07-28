@@ -18,6 +18,7 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - Optional `update_site.py` script can generate posts, update the news section
   and freeze the site. It no longer pushes updates automatically so the site is
   only published when you manually push changes.
+- `batch_courses.py` can generate multiple courses in one run.
 - Login and admin pages are only available when the environment variable
   `SHOW_LOGIN=1` is set while running the Flask app. They are excluded from the
   static site, so visitors on GitHub Pages will never see the login button.
@@ -44,6 +45,10 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 6. (Optional) Automatically create posts, freeze the site and push updates:
    ```bash
    python update_site.py
+   ```
+7. (Optional) Generate several courses at once:
+   ```bash
+   python batch_courses.py "Jewish history" --courses 3 --modules 5
    ```
 
 The application uses a SQLite database (`site.db`) created automatically on first run.
