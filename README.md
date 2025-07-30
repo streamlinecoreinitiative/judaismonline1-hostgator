@@ -101,6 +101,15 @@ the site in one command. It leaves the updated files in your repository so you
 can review them and push when ready using the admin "Push to GitHub" button (or
 your own `git` commands).
 
+If the button fails or you prefer the command line, run:
+
+```bash
+python freeze.py
+git add docs
+git commit -m "Update site"
+git push
+```
+
 Other static hosting platforms such as Netlify or Vercel can be used if you
 prefer. Any service capable of serving the generated `docs/` directory will
 work.

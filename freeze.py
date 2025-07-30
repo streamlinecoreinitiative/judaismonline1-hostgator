@@ -36,10 +36,14 @@ def course_detail():
     for course in Course.query.all():
         yield {'course_id': course.id}
 
-@freezer.register_generator
-def certificate():
-    for course in Course.query.all():
-        yield {'course_id': course.id}
+
+# Certificate pages are only available for users who have completed a
+# course, so they rely on session state and cannot be generated
+# statically.  The corresponding generator previously attempted to
+# freeze ``/certificate/<course_id>/`` pages which resulted in a
+# ``403 FORBIDDEN`` error during the freeze process.  Removing this
+# generator avoids the error and mirrors the behaviour of the site,
+# where certificates are generated dynamically at runtime.
 
 
 @freezer.register_generator
