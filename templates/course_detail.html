@@ -18,7 +18,10 @@
       <li class="list-group-item d-flex justify-content-between align-items-center">
         <span>{{ loop.index }}. {{ s.title }}</span>
         {% if s.id in completed %}
-          <span class="badge bg-success">Completed</span>
+          <div class="d-flex align-items-center">
+            <span class="badge bg-success me-2">Completed</span>
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('course_section', course_id=course.id, section_id=s.id) }}">Review</a>
+          </div>
         {% else %}
           <a class="btn btn-sm btn-primary" href="{{ url_for('course_section', course_id=course.id, section_id=s.id) }}">Start</a>
         {% endif %}
