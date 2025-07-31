@@ -13,6 +13,7 @@ from flask import (
     url_for,
     session,
     abort,
+    flash,
 )
 from flask_sqlalchemy import SQLAlchemy
 
@@ -1028,6 +1029,15 @@ def admin():
         site_topic=site_topic,
         news_api_url=news_api_url,
     )
+
+
+@app.route("/admin/deploy_hostgator")
+@require_login
+def deploy_hostgator_route():
+    """Generate the static site and upload it to HostGator via FTP."""
+    subprocess.run([sys.executable, "deploy_hostgator.py"], check=True)
+    flash("Site deployed to HostGator.", "success")
+    return redirect(url_for("admin"))
 
 
 if __name__ == "__main__":
