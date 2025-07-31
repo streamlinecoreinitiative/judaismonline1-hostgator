@@ -14,7 +14,7 @@
 </ul>
 </body>
 {% else %}
-<form method="post">
+<form method="post" id="cert-form">
   <div class="mb-3">
     <label for="name" class="form-label">Your Name</label>
     <input class="form-control" id="name" name="name" placeholder="Your name">
@@ -23,7 +23,19 @@
     <label for="email" class="form-label">Email</label>
     <input class="form-control" id="email" name="email" placeholder="you@example.com">
   </div>
-  <button class="btn btn-primary" type="submit">Generate Certificate</button>
 </form>
+<script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
+<div id="paypal-button-container"></div>
+<script>
+  paypal.Buttons({
+    createOrder: (data, actions) => actions.order.create({
+      purchase_units: [{ amount: { value: '5.00' } }]
+    }),
+    onApprove: (data, actions) =>
+      actions.order.capture().then(() => {
+        document.getElementById('cert-form').submit();
+      })
+  }).render('#paypal-button-container');
+</script>
 {% endif %}
 {% endblock %}

@@ -263,6 +263,10 @@
   <input type="hidden" name="action" value="push">
   <button class="btn btn-primary" type="submit">Push to GitHub</button>
 </form>
+<!-- HostGator deployment button -->
+<form method="post" action="{{ url_for('deploy_hostgator_route') }}">
+    <button type="submit" class="btn btn-primary">Deploy to HostGator</button>
+</form>
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
   CKEDITOR.replace('new_description');
