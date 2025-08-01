@@ -601,6 +601,14 @@ def create_tables():
         set_setting("site_topic", "Judaism")
     if not get_setting("news_api_url"):
         set_setting("news_api_url", DEFAULT_NEWS_API_URL)
+    if not get_setting("hostgator_host") and os.environ.get("HOSTGATOR_HOST"):
+        set_setting("hostgator_host", os.environ.get("HOSTGATOR_HOST"))
+    if not get_setting("hostgator_username") and os.environ.get("HOSTGATOR_USERNAME"):
+        set_setting("hostgator_username", os.environ.get("HOSTGATOR_USERNAME"))
+    if not get_setting("hostgator_password") and os.environ.get("HOSTGATOR_PASSWORD"):
+        set_setting("hostgator_password", os.environ.get("HOSTGATOR_PASSWORD"))
+    if not get_setting("hostgator_path") and os.environ.get("HOSTGATOR_REMOTE_PATH"):
+        set_setting("hostgator_path", os.environ.get("HOSTGATOR_REMOTE_PATH"))
 
 
 @app.route("/")
@@ -984,6 +992,11 @@ def admin():
         elif action == "update_settings":
             set_setting("site_topic", request.form.get("site_topic", "").strip())
             set_setting("news_api_url", request.form.get("news_api_url", "").strip())
+        elif action == "update_ftp":
+            set_setting("hostgator_host", request.form.get("hostgator_host", "").strip())
+            set_setting("hostgator_username", request.form.get("hostgator_username", "").strip())
+            set_setting("hostgator_password", request.form.get("hostgator_password", "").strip())
+            set_setting("hostgator_path", request.form.get("hostgator_path", "").strip())
         elif action == "upload_image":
             slug = secure_filename(request.form.get("slug", ""))
             allowed = [p.slug for p in Page.query.all()] + ["hero"]
@@ -1007,12 +1020,6 @@ def admin():
             if page:
                 page.content = content
                 db.session.commit()
-        elif action == "push":
-            subprocess.run([sys.executable, "freeze.py"], check=True)
-            subprocess.run(["git", "add", "docs"], check=True)
-            msg = f"Update site {datetime.date.today().isoformat()}"
-            subprocess.run(["git", "commit", "-m", msg])
-            subprocess.run(["git", "push"])
         return redirect(url_for("admin"))
     pages = Page.query.all()
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
@@ -1021,6 +1028,10 @@ def admin():
     last_fetch = get_setting("last_news_fetch")
     site_topic = get_setting("site_topic", "Judaism")
     news_api_url = get_setting("news_api_url", DEFAULT_NEWS_API_URL)
+    hostgator_host = get_setting("hostgator_host", "")
+    hostgator_username = get_setting("hostgator_username", "")
+    hostgator_password = get_setting("hostgator_password", "")
+    hostgator_path = get_setting("hostgator_path", "/public_html")
     return render_template(
         "admin.html",
         pages=pages,
@@ -1030,6 +1041,10 @@ def admin():
         last_news_fetch=last_fetch,
         site_topic=site_topic,
         news_api_url=news_api_url,
+        hostgator_host=hostgator_host,
+        hostgator_username=hostgator_username,
+        hostgator_password=hostgator_password,
+        hostgator_path=hostgator_path,
     )
 
 
@@ -1037,11 +1052,59 @@ def admin():
 def deploy_hostgator_route():
     require_login()
     """Generate the static site and upload it to HostGator via FTP."""
+    env = os.environ.copy()
+    env.update({
+        "HOSTGATOR_HOST": get_setting("hostgator_host", ""),
+        "HOSTGATOR_USERNAME": get_setting("hostgator_username", ""),
+        "HOSTGATOR_PASSWORD": get_setting("hostgator_password", ""),
+        "HOSTGATOR_REMOTE_PATH": get_setting("hostgator_path", "/public_html"),
+    })
     try:
-        subprocess.run([sys.executable, "deploy_hostgator.py"], check=True)
+        result = subprocess.run(
+            [sys.executable, "deploy_hostgator.py"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=True,
+        )
         flash("Site deployed to HostGator.", "success")
+        if result.stdout:
+            flash(result.stdout, "info")
+        if result.stderr:
+            flash(result.stderr, "warning")
     except subprocess.CalledProcessError as e:
-        flash(f"Deployment failed: {e}", "danger")
+        output = (e.stdout or "") + (e.stderr or "")
+        flash(f"Deployment failed: {output}", "danger")
+    return redirect(url_for("admin"))
+
+
+@app.route("/admin/delete_hostgator", methods=["POST"])
+def delete_hostgator_route():
+    require_login()
+    """Remove the static site from HostGator via FTP."""
+    env = os.environ.copy()
+    env.update({
+        "HOSTGATOR_HOST": get_setting("hostgator_host", ""),
+        "HOSTGATOR_USERNAME": get_setting("hostgator_username", ""),
+        "HOSTGATOR_PASSWORD": get_setting("hostgator_password", ""),
+        "HOSTGATOR_REMOTE_PATH": get_setting("hostgator_path", "/public_html"),
+    })
+    try:
+        result = subprocess.run(
+            [sys.executable, "delete_hostgator.py"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=True,
+        )
+        flash("Remote files deleted from HostGator.", "success")
+        if result.stdout:
+            flash(result.stdout, "info")
+        if result.stderr:
+            flash(result.stderr, "warning")
+    except subprocess.CalledProcessError as e:
+        output = (e.stdout or "") + (e.stderr or "")
+        flash(f"Deletion failed: {output}", "danger")
     return redirect(url_for("admin"))
 
 
