@@ -817,7 +817,9 @@ def course_quiz(course_id):
 
 @app.route("/admin/", methods=["GET", "POST"])
 def admin():
-    require_login()
+    resp = require_login()
+    if resp:
+        return resp
     if request.method == "POST":
         action = request.form.get("action")
         if action == "blog":
@@ -1032,8 +1034,8 @@ def admin():
 
 
 @app.route("/admin/deploy_hostgator", methods=["POST"])
-@require_login
 def deploy_hostgator_route():
+    require_login()
     """Generate the static site and upload it to HostGator via FTP."""
     try:
         subprocess.run([sys.executable, "deploy_hostgator.py"], check=True)
