@@ -13,4 +13,9 @@ def create_daily_posts(count: int = 2):
 
 
 if __name__ == "__main__":
-    create_daily_posts()
+    from app import app, create_tables
+
+    # Run within the Flask application context so database operations work
+    with app.app_context():
+        create_tables()
+        create_daily_posts()
