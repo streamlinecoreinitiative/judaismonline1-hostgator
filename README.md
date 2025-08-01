@@ -17,12 +17,12 @@ It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama))
 - News section populated from a configurable API (`update_news.py`).
   The admin page lets you set the feed URL and shows when the news was last fetched.
 - Optional `update_site.py` script can generate posts, update the news section
-  and freeze the site. It no longer pushes updates automatically so the site is
-  only published when you manually push changes.
+  and freeze the site. It no longer deploys automatically so the site is only
+  updated when you trigger a deployment.
 - `batch_courses.py` can generate multiple courses in one run.
 - Login and admin pages are only available when the environment variable
   `SHOW_LOGIN=1` is set while running the Flask app. They are excluded from the
-  static site, so visitors on GitHub Pages will never see the login button.
+  static site, so visitors won't see the login button.
 
 ## Setup
 
@@ -76,57 +76,19 @@ without editing the repository manually.
 
 Set the admin password using the `ADMIN_PASSWORD` environment variable (defaults to `admin`).
 
-## Deployment to GitHub Pages
-
-You can generate a static version of the site using Frozen-Flask:
-
-```bash
-python freeze.py
-```
-
-The script initializes the database tables if needed and then writes the
-generated HTML to the `docs/` directory.
-
-A GitHub Actions workflow (`.github/workflows/gh-pages.yml`) automatically
-freezes the site on every push to `main` and publishes the contents of `docs/`
-to the `gh-pages` branch. Enable GitHub Pages for that branch in the repository
-settings so the static site is available at `https://<username>.github.io/<repo>`.
-The freezer now produces **relative URLs** so the site works correctly when
-served from that sub-path. After generating or editing content locally, run
-`python freeze.py` and push the updated `docs/` directory to trigger the
-deployment workflow.
-
-`update_site.py` provides a simple way to generate posts, fetch news and freeze
-the site in one command. It leaves the updated files in your repository so you
-can review them and push when ready using the admin "Push to GitHub" button (or
-your own `git` commands).
-
-If the button fails or you prefer the command line, run:
-
-```bash
-python freeze.py
-git add docs
-git commit -m "Update site"
-git push
-```
-
-Other static hosting platforms such as Netlify or Vercel can be used if you
-prefer. Any service capable of serving the generated `docs/` directory will
-work.
 
 ## Deployment to HostGator
 
 If you host your site on HostGator, the repository includes a helper script
-`deploy_hostgator.py` that uploads the frozen site via FTP. Before running the
-script or using the **Deploy to HostGator** button on the admin page, set these
-environment variables:
+`deploy_hostgator.py` that uploads the frozen site via FTP. You can store the
+FTP credentials from the admin page or set these environment variables:
 
 - `HOSTGATOR_HOST` – the FTP server hostname (e.g. `ftp.example.com`).
 - `HOSTGATOR_USERNAME` – your FTP username.
 - `HOSTGATOR_PASSWORD` – your FTP password.
 - `HOSTGATOR_REMOTE_PATH` – destination directory (defaults to `/public_html`).
 
-With the variables in place you can trigger the deployment from the admin
+With the credentials in place you can trigger the deployment from the admin
 interface or run:
 
 ```bash
@@ -135,3 +97,6 @@ python deploy_hostgator.py
 
 The script runs `update_site.py` to generate the latest content and then uploads
 the files in `docs/` to your HostGator account.
+
+You can also remove the remote directory using `delete_hostgator.py` or the
+**Delete** button in the admin interface.

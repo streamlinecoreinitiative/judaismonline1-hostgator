@@ -258,15 +258,40 @@
       </div>
     </div>
   </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingDeploy">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDeploy" aria-expanded="false" aria-controls="collapseDeploy">
+        Deployment
+      </button>
+    </h2>
+    <div id="collapseDeploy" class="accordion-collapse collapse" aria-labelledby="headingDeploy" data-bs-parent="#adminAccordion">
+      <div class="accordion-body">
+        <form method="post" class="mb-3">
+          <input type="hidden" name="action" value="update_ftp">
+          <div class="mb-1">FTP Host:
+            <input type="text" name="hostgator_host" class="form-control" value="{{ hostgator_host }}">
+          </div>
+          <div class="mb-1">FTP Username:
+            <input type="text" name="hostgator_username" class="form-control" value="{{ hostgator_username }}">
+          </div>
+          <div class="mb-1">FTP Password:
+            <input type="password" name="hostgator_password" class="form-control" value="{{ hostgator_password }}">
+          </div>
+          <div class="mb-1">Remote Path:
+            <input type="text" name="hostgator_path" class="form-control" value="{{ hostgator_path }}">
+          </div>
+          <button class="btn btn-secondary" type="submit">Save Credentials</button>
+        </form>
+        <form method="post" action="{{ url_for('deploy_hostgator_route') }}" class="mb-2">
+          <button type="submit" class="btn btn-primary">Deploy to HostGator</button>
+        </form>
+        <form method="post" action="{{ url_for('delete_hostgator_route') }}" onsubmit="return confirm('Delete remote files?');">
+          <button type="submit" class="btn btn-danger">Delete Remote Files</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
-<form method="post" class="mb-4 show-spinner">
-  <input type="hidden" name="action" value="push">
-  <button class="btn btn-primary" type="submit">Push to GitHub</button>
-</form>
-<!-- HostGator deployment button -->
-<form method="post" action="{{ url_for('deploy_hostgator_route') }}">
-    <button type="submit" class="btn btn-primary">Deploy to HostGator</button>
-</form>
 <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
 <script>
   CKEDITOR.replace('new_description');

@@ -4,7 +4,7 @@ import sys
 
 # Ensure required packages are available. This helps when the freeze command
 # is triggered from environments that may not have the project's dependencies
-# installed (for example from the admin "push" button).
+# installed (for example when called from the admin deployment page).
 try:
     from flask import Flask  # noqa: F401 - check only for import
     from flask_sqlalchemy import SQLAlchemy  # noqa: F401

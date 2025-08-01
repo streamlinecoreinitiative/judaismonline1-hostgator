@@ -16,7 +16,5 @@ def run(cmd):
 if __name__ == '__main__':
     for cmd in COMMANDS:
         run(cmd)
-    print(
-        "Site content updated locally. Use the admin 'Push to GitHub' button to publish."
-    )
+    print("Site content updated locally.")
 
