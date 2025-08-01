@@ -113,3 +113,25 @@ git push
 Other static hosting platforms such as Netlify or Vercel can be used if you
 prefer. Any service capable of serving the generated `docs/` directory will
 work.
+
+## Deployment to HostGator
+
+If you host your site on HostGator, the repository includes a helper script
+`deploy_hostgator.py` that uploads the frozen site via FTP. Before running the
+script or using the **Deploy to HostGator** button on the admin page, set these
+environment variables:
+
+- `HOSTGATOR_HOST` – the FTP server hostname (e.g. `ftp.example.com`).
+- `HOSTGATOR_USERNAME` – your FTP username.
+- `HOSTGATOR_PASSWORD` – your FTP password.
+- `HOSTGATOR_REMOTE_PATH` – destination directory (defaults to `/public_html`).
+
+With the variables in place you can trigger the deployment from the admin
+interface or run:
+
+```bash
+python deploy_hostgator.py
+```
+
+The script runs `update_site.py` to generate the latest content and then uploads
+the files in `docs/` to your HostGator account.

@@ -1031,12 +1031,15 @@ def admin():
     )
 
 
-@app.route("/admin/deploy_hostgator")
+@app.route("/admin/deploy_hostgator", methods=["POST"])
 @require_login
 def deploy_hostgator_route():
     """Generate the static site and upload it to HostGator via FTP."""
-    subprocess.run([sys.executable, "deploy_hostgator.py"], check=True)
-    flash("Site deployed to HostGator.", "success")
+    try:
+        subprocess.run([sys.executable, "deploy_hostgator.py"], check=True)
+        flash("Site deployed to HostGator.", "success")
+    except subprocess.CalledProcessError as e:
+        flash(f"Deployment failed: {e}", "danger")
     return redirect(url_for("admin"))
 
 
