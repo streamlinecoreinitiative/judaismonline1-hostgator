@@ -592,8 +592,6 @@ def create_tables():
         page = Page.query.filter_by(slug=slug).first()
         if page is None:
             db.session.add(Page(slug=slug, title=slug.capitalize(), content=content))
-        else:
-            page.content = content
     db.session.commit()
     if not get_setting("admin_email") and os.environ.get("ADMIN_EMAIL"):
         set_setting("admin_email", os.environ.get("ADMIN_EMAIL"))
