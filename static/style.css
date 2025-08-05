@@ -10,8 +10,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap');
 
 body {
-  background: linear-gradient(to right, #f2f7fd, #ffffff);
-  color: #333;
+  background: #000;
+  color: #ffa500;
   font-family: 'Open Sans', sans-serif;
 }
 
@@ -20,19 +20,19 @@ h1, h2, .navbar-brand {
 }
 
 .navbar {
-  background-color: #343a40 !important;
+  background-color: #000 !important;
 }
 .navbar .nav-link,
 .navbar .navbar-brand {
-  color: #f8f9fa !important;
+  color: #ffa500 !important;
 }
 .navbar .nav-link:hover {
-  color: #ffdd57 !important;
+  color: #fff !important;
 }
 
 .hero {
   background: url('/static/hero.jpg') center/cover no-repeat;
-  color: #fff;
+  color: #ffa500;
   padding: 5rem 2rem;
   text-align: center;
   margin-bottom: 2rem;
@@ -55,8 +55,18 @@ h1, h2, .navbar-brand {
 }
 
 .section-heading {
-  color: #0056b3;
-  border-bottom: 2px solid #ffdd57;
+  color: #ffa500;
+  border-bottom: 2px solid #ffa500;
   padding-bottom: .5rem;
   margin-bottom: 1rem;
+}
+
+.btn-primary {
+  background-color: #ffa500;
+  border-color: #ffa500;
+}
+
+.btn-primary:hover {
+  background-color: #e69500;
+  border-color: #e69500;
 }

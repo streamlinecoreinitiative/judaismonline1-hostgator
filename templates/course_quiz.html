@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="mb-4">{{ course.title }} - Quiz</h1>
-<p class="text-muted">You must score at least 80% to enable the Download Certificate button.</p>
+<h1 class="mb-4">{{ course.title }} - Examen</h1>
+<p class="text-muted">Debes obtener al menos 80% para habilitar el botón de descarga del certificado.</p>
 {% if score is not none %}
-<p>Your score: {{ score }}/{{ questions|length }}</p>
+<p>Tu puntuación: {{ score }}/{{ questions|length }}</p>
 {% if passed %}
-<div class="alert alert-success">You passed! Return to the course page to download your certificate.</div>
+<div class="alert alert-success">¡Aprobaste! Regresa a la página del curso para descargar tu certificado.</div>
 {% else %}
-<div class="alert alert-danger">You need at least 8 correct answers to pass.</div>
+<div class="alert alert-danger">Necesitas al menos 8 respuestas correctas para aprobar.</div>
 {% endif %}
 {% endif %}
 <form method="post">
@@ -34,6 +34,6 @@
     {% endif %}
   </div>
   {% endfor %}
-  <button class="btn btn-primary" type="submit">Submit Quiz</button>
+  <button class="btn btn-primary" type="submit">Enviar Examen</button>
 </form>
 {% endblock %}

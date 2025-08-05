@@ -4,10 +4,10 @@
 {% for post in posts %}
   <div class="mb-4" data-aos="fade-up">
     <h2>{{ post.title }}</h2>
-    <p class="text-muted">{{ post.created_at.strftime('%B %d, %Y') }}</p>
+    <p class="text-muted">{{ post.created_at.strftime('%d/%m/%Y') }}</p>
     <p>{{ post.content|markdown|safe }}</p>
   </div>
 {% else %}
-  <p>No posts yet.</p>
+  <p>Aún no hay publicaciones.</p>
 {% endfor %}
 {% endblock %}

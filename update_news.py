@@ -7,10 +7,12 @@ def fetch_news():
     api_url = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
     resp = requests.get(api_url, timeout=10)
     resp.raise_for_status()
-    for item in resp.json():
-        title = item.get("title", {}).get("rendered", "")
-        url = item.get("link", "")
-        summary = item.get("excerpt", {}).get("rendered", "")
+    data = resp.json()
+    items = data.get("results", data)
+    for item in items:
+        title = item.get("title", "")
+        url = item.get("link") or item.get("url", "")
+        summary = item.get("description", "")
         if not NewsItem.query.filter_by(url=url).first():
             db.session.add(NewsItem(title=title, url=url, summary=summary))
     db.session.commit()

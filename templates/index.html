@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="hero text-center text-white mb-4">
+  <div class="hero text-center mb-4">
     <h1 class="display-4" data-aos="fade-down">{{ page.title }}</h1>
-    <p class="lead mb-3" data-aos="fade-up">Explore articles and courses to deepen your understanding.</p>
-    <a class="btn btn-primary btn-lg" href="{{ url_for('courses') }}" data-aos="zoom-in">Browse Courses</a>
+    <p class="lead mb-3" data-aos="fade-up">Explora artículos y cursos para profundizar tu conocimiento.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('courses') }}" data-aos="zoom-in">Ver Cursos</a>
   </div>
   <div data-aos="fade-up">
     {{ page.content|markdown|safe }}

@@ -1,24 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Admin</h1>
+<h1>Administrador</h1>
 <div class="accordion mb-4" id="adminAccordion">
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingSettings">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSettings" aria-expanded="false" aria-controls="collapseSettings">
-        Settings
+        Configuración
       </button>
     </h2>
     <div id="collapseSettings" class="accordion-collapse collapse" aria-labelledby="headingSettings" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="update_settings">
-          <div class="mb-1">Site Topic:
+          <div class="mb-1">Tema del Sitio:
             <input type="text" name="site_topic" class="form-control" value="{{ site_topic }}">
           </div>
-          <div class="mb-1">News API URL:
+          <div class="mb-1">URL de Noticias:
             <input type="text" name="news_api_url" class="form-control" value="{{ news_api_url }}">
           </div>
-          <button class="btn btn-primary" type="submit">Save Settings</button>
+          <button class="btn btn-primary" type="submit">Guardar Configuración</button>
         </form>
       </div>
     </div>
@@ -33,21 +33,21 @@
       <div class="accordion-body">
         <form method="post" class="mb-3 show-spinner">
           <input type="hidden" name="action" value="blog">
-          <button class="btn btn-primary" type="submit">Generate Blog Post</button>
+          <button class="btn btn-primary" type="submit">Generar Entrada de Blog</button>
         </form>
-        <h2>Blog Posts</h2>
+        <h2>Entradas del Blog</h2>
         {% for post in posts %}
         <form method="post" class="mb-2">
           <input type="hidden" name="action" value="update_blog">
           <input type="hidden" name="id" value="{{ post.id }}">
           <input type="text" name="title" class="form-control mb-1" value="{{ post.title }}">
           <textarea name="content" class="form-control mb-1 blog-content" rows="3">{{ post.content }}</textarea>
-          <button class="btn btn-secondary me-2" type="submit">Save</button>
+          <button class="btn btn-secondary me-2" type="submit">Guardar</button>
         </form>
         <form method="post" class="mb-4">
           <input type="hidden" name="action" value="delete_blog">
           <input type="hidden" name="id" value="{{ post.id }}">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
         {% endfor %}
       </div>
@@ -57,63 +57,64 @@
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingCourses">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCourses" aria-expanded="false" aria-controls="collapseCourses">
-        Courses
+        Cursos
       </button>
     </h2>
     <div id="collapseCourses" class="accordion-collapse collapse" aria-labelledby="headingCourses" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
         <form method="post" enctype="multipart/form-data" class="mb-3 show-spinner">
           <input type="hidden" name="action" value="course">
-          <div class="mb-1">Topic: <input type="text" name="topic"></div>
-          <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="Beginner"></div>
-          <div class="mb-1">Prerequisites: <input type="text" name="prerequisites"></div>
-          <div class="mb-1">Number of Modules (max 10): <input type="number" name="module_count" value="3" min="1" max="10"></div>
+          <div class="mb-1">Tema: <input type="text" name="topic"></div>
+          <div class="mb-1">Dificultad: <input type="text" name="difficulty" value="Principiante"></div>
+          <div class="mb-1">Requisitos previos: <input type="text" name="prerequisites"></div>
+          <div class="mb-1">Número de Módulos (máx 10): <input type="number" name="module_count" value="3" min="1" max="10"></div>
           <div class="mb-1">
-            Description:
+            Descripción:
             <textarea name="description" id="new_description" class="form-control" rows="4"></textarea>
           </div>
-          <div class="mb-1">Icon: <input type="file" name="icon"></div>
-          <button class="btn btn-primary" type="submit">Generate Course</button>
+          <div class="mb-1">Empresa: <input type="text" name="company"></div>
+          <div class="mb-1">Ícono: <input type="file" name="icon"></div>
+          <button class="btn btn-primary" type="submit">Generar Curso</button>
         </form>
-        <h2>Courses</h2>
+        <h2>Cursos</h2>
         {% for c in courses %}
         <form method="post" enctype="multipart/form-data" class="mb-2">
           <input type="hidden" name="action" value="update_course">
           <input type="hidden" name="id" value="{{ c.id }}">
           <input type="text" name="title" class="form-control mb-1" value="{{ c.title }}">
           <textarea name="description" class="form-control mb-1" rows="3">{{ c.description }}</textarea>
-          <div class="mb-1">Difficulty: <input type="text" name="difficulty" value="{{ c.difficulty }}"></div>
-          <div class="mb-1">Prerequisites: <input type="text" name="prerequisites" value="{{ c.prerequisites }}"></div>
-          <div class="mb-1">Icon: <input type="file" name="icon"></div>
+          <div class="mb-1">Dificultad: <input type="text" name="difficulty" value="{{ c.difficulty }}"></div>
+          <div class="mb-1">Requisitos previos: <input type="text" name="prerequisites" value="{{ c.prerequisites }}"></div>
+          <div class="mb-1">Ícono: <input type="file" name="icon"></div>
           <div class="form-check mb-1">
             <input class="form-check-input" type="checkbox" value="1" name="remove_icon" id="remove{{ c.id }}">
-            <label class="form-check-label" for="remove{{ c.id }}">Remove existing icon</label>
+            <label class="form-check-label" for="remove{{ c.id }}">Eliminar ícono existente</label>
           </div>
-          <button class="btn btn-secondary me-2" type="submit">Save</button>
+          <button class="btn btn-secondary me-2" type="submit">Guardar</button>
         </form>
         <form method="post" class="mb-4">
           <input type="hidden" name="action" value="delete_course">
           <input type="hidden" name="id" value="{{ c.id }}">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
-        <h4 class="mt-3">Modules</h4>
+        <h4 class="mt-3">Módulos</h4>
         {% for s in c.sections %}
         <form method="post" class="mb-2">
           <input type="hidden" name="action" value="update_section">
           <input type="hidden" name="id" value="{{ s.id }}">
           <input type="text" name="title" class="form-control mb-1" value="{{ s.title }}">
           <textarea name="content" class="form-control mb-1 module-content" rows="3">{{ s.content }}</textarea>
-          <input type="text" name="question" class="form-control mb-1" placeholder="Question" value="{{ s.question }}">
-          <input type="text" name="answer" class="form-control mb-1" placeholder="Answer" value="{{ s.answer }}">
-          <button class="btn btn-secondary me-2" type="submit">Save</button>
+          <input type="text" name="question" class="form-control mb-1" placeholder="Pregunta" value="{{ s.question }}">
+          <input type="text" name="answer" class="form-control mb-1" placeholder="Respuesta" value="{{ s.answer }}">
+          <button class="btn btn-secondary me-2" type="submit">Guardar</button>
         </form>
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="delete_section">
           <input type="hidden" name="id" value="{{ s.id }}">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
         {% endfor %}
-        <h4>Quiz Questions</h4>
+        <h4>Preguntas del Examen</h4>
         {% for q in c.quiz_questions %}
         <form method="post" class="mb-2">
           <input type="hidden" name="action" value="update_question">
@@ -125,19 +126,19 @@
             <div class="col"><input type="text" name="c" class="form-control" placeholder="C" value="{{ q.option_c }}"></div>
             <div class="col"><input type="text" name="d" class="form-control" placeholder="D" value="{{ q.option_d }}"></div>
           </div>
-          <div class="mb-1">Correct Answer: <input type="text" name="answer" class="form-control" value="{{ q.answer }}"></div>
-          <button class="btn btn-secondary me-2" type="submit">Save</button>
+          <div class="mb-1">Respuesta Correcta: <input type="text" name="answer" class="form-control" value="{{ q.answer }}"></div>
+          <button class="btn btn-secondary me-2" type="submit">Guardar</button>
         </form>
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="delete_question">
           <input type="hidden" name="id" value="{{ q.id }}">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
         {% endfor %}
         <form method="post" class="mb-4 show-spinner">
           <input type="hidden" name="action" value="generate_questions">
           <input type="hidden" name="id" value="{{ c.id }}">
-          <button class="btn btn-primary" type="submit">Regenerate Quiz</button>
+          <button class="btn btn-primary" type="submit">Regenerar Examen</button>
         </form>
         {% endfor %}
       </div>
@@ -147,22 +148,22 @@
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingNews">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNews" aria-expanded="false" aria-controls="collapseNews">
-        News
+        Noticias
       </button>
     </h2>
     <div id="collapseNews" class="accordion-collapse collapse" aria-labelledby="headingNews" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="fetch_news">
-          <button class="btn btn-primary" type="submit">Fetch Latest News</button>
+          <button class="btn btn-primary" type="submit">Obtener Últimas Noticias</button>
         </form>
-        <p class="text-muted">Last fetch: {{ last_news_fetch or 'never' }}</p>
+        <p class="text-muted">Última actualización: {{ last_news_fetch or 'nunca' }}</p>
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="create_news">
-          <input type="text" name="title" class="form-control mb-1" placeholder="Title">
+          <input type="text" name="title" class="form-control mb-1" placeholder="Título">
           <input type="text" name="url" class="form-control mb-1" placeholder="URL">
-          <textarea name="summary" class="form-control mb-1" rows="2" placeholder="Summary"></textarea>
-          <button class="btn btn-primary" type="submit">Add News Item</button>
+          <textarea name="summary" class="form-control mb-1" rows="2" placeholder="Resumen"></textarea>
+          <button class="btn btn-primary" type="submit">Agregar Noticia</button>
         </form>
         {% for n in items %}
         <form method="post" class="mb-2">
@@ -171,12 +172,12 @@
           <input type="text" name="title" class="form-control mb-1" value="{{ n.title }}">
           <input type="text" name="url" class="form-control mb-1" value="{{ n.url }}">
           <textarea name="summary" class="form-control mb-1" rows="2">{{ n.summary }}</textarea>
-          <button class="btn btn-secondary me-2" type="submit">Save</button>
+          <button class="btn btn-secondary me-2" type="submit">Guardar</button>
         </form>
         <form method="post" class="mb-4">
           <input type="hidden" name="action" value="delete_news">
           <input type="hidden" name="id" value="{{ n.id }}">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
         {% endfor %}
       </div>
@@ -186,7 +187,7 @@
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingPages">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePages" aria-expanded="false" aria-controls="collapsePages">
-        Pages
+        Páginas
       </button>
     </h2>
     <div id="collapsePages" class="accordion-collapse collapse" aria-labelledby="headingPages" data-bs-parent="#adminAccordion">
@@ -197,7 +198,7 @@
           <input type="hidden" name="slug" value="{{ p.slug }}">
           <h3>{{ p.title }}</h3>
           <textarea name="content" class="form-control" rows="4">{{ p.content }}</textarea>
-          <button class="btn btn-secondary mt-2" type="submit">Save</button>
+          <button class="btn btn-secondary mt-2" type="submit">Guardar</button>
         </form>
         {% endfor %}
       </div>
@@ -207,37 +208,37 @@
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingImages">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImages" aria-expanded="false" aria-controls="collapseImages">
-        Images
+        Imágenes
       </button>
     </h2>
     <div id="collapseImages" class="accordion-collapse collapse" aria-labelledby="headingImages" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
-        <h3>Hero Image</h3>
+        <h3>Imagen Principal</h3>
         <img src="{{ url_for('static', filename='hero.jpg') }}" class="img-fluid mb-2" style="max-width:200px">
         <form method="post" enctype="multipart/form-data" class="mb-2">
           <input type="hidden" name="action" value="upload_image">
           <input type="hidden" name="slug" value="hero">
           <input type="file" name="image" class="form-control mb-2">
-          <button class="btn btn-primary" type="submit">Upload</button>
+          <button class="btn btn-primary" type="submit">Subir</button>
         </form>
         <form method="post" class="mb-4">
           <input type="hidden" name="action" value="delete_image">
           <input type="hidden" name="slug" value="hero">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
         {% for p in pages if p.slug != 'landing' %}
-        <h3>{{ p.title }} Image</h3>
+        <h3>Imagen de {{ p.title }}</h3>
         <img src="{{ url_for('static', filename=p.slug + '.jpg') }}" class="img-fluid mb-2" style="max-width:200px">
         <form method="post" enctype="multipart/form-data" class="mb-2">
           <input type="hidden" name="action" value="upload_image">
           <input type="hidden" name="slug" value="{{ p.slug }}">
           <input type="file" name="image" class="form-control mb-2">
-          <button class="btn btn-primary" type="submit">Upload</button>
+          <button class="btn btn-primary" type="submit">Subir</button>
         </form>
         <form method="post" class="mb-4">
           <input type="hidden" name="action" value="delete_image">
           <input type="hidden" name="slug" value="{{ p.slug }}">
-          <button class="btn btn-danger" type="submit">Delete</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
         </form>
         {% endfor %}
       </div>
@@ -246,14 +247,14 @@
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingDanger">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDanger" aria-expanded="false" aria-controls="collapseDanger">
-        Danger Zone
+        Zona de Riesgo
       </button>
     </h2>
     <div id="collapseDanger" class="accordion-collapse collapse" aria-labelledby="headingDanger" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
-        <form method="post" onsubmit="return confirm('Delete all AI generated content?');">
+        <form method="post" onsubmit="return confirm('¿Eliminar todo el contenido generado por IA?');">
           <input type="hidden" name="action" value="clear_ai_content">
-          <button class="btn btn-danger" type="submit">Delete All AI Content</button>
+          <button class="btn btn-danger" type="submit">Eliminar Todo el Contenido de IA</button>
         </form>
       </div>
     </div>
@@ -261,32 +262,32 @@
   <div class="accordion-item">
     <h2 class="accordion-header" id="headingDeploy">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDeploy" aria-expanded="false" aria-controls="collapseDeploy">
-        Deployment
+        Despliegue
       </button>
     </h2>
     <div id="collapseDeploy" class="accordion-collapse collapse" aria-labelledby="headingDeploy" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
         <form method="post" class="mb-3">
           <input type="hidden" name="action" value="update_ftp">
-          <div class="mb-1">FTP Host:
+          <div class="mb-1">Host FTP:
             <input type="text" name="hostgator_host" class="form-control" value="{{ hostgator_host }}">
           </div>
-          <div class="mb-1">FTP Username:
+          <div class="mb-1">Usuario FTP:
             <input type="text" name="hostgator_username" class="form-control" value="{{ hostgator_username }}">
           </div>
-          <div class="mb-1">FTP Password:
+          <div class="mb-1">Contraseña FTP:
             <input type="password" name="hostgator_password" class="form-control" value="{{ hostgator_password }}">
           </div>
-          <div class="mb-1">Remote Path:
+          <div class="mb-1">Ruta Remota:
             <input type="text" name="hostgator_path" class="form-control" value="{{ hostgator_path }}">
           </div>
-          <button class="btn btn-secondary" type="submit">Save Credentials</button>
+          <button class="btn btn-secondary" type="submit">Guardar Credenciales</button>
         </form>
         <form method="post" action="{{ url_for('deploy_hostgator_route') }}" class="mb-2">
-          <button type="submit" class="btn btn-primary">Deploy to HostGator</button>
+          <button type="submit" class="btn btn-primary">Desplegar a HostGator</button>
         </form>
-        <form method="post" action="{{ url_for('delete_hostgator_route') }}" onsubmit="return confirm('Delete remote files?');">
-          <button type="submit" class="btn btn-danger">Delete Remote Files</button>
+        <form method="post" action="{{ url_for('delete_hostgator_route') }}" onsubmit="return confirm('¿Eliminar archivos remotos?');">
+          <button type="submit" class="btn btn-danger">Eliminar Archivos Remotos</button>
         </form>
       </div>
     </div>

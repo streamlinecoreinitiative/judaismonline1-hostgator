@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 data-aos="fade-down">News</h1>
+<h1 data-aos="fade-down">Noticias</h1>
 <ul data-aos="fade-up">
 {% for item in items %}
   <li>
@@ -9,7 +9,7 @@
     <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
   </li>
 {% else %}
-  <li>No news yet.</li>
+  <li>Aún no hay noticias.</li>
 {% endfor %}
 </ul>
 {% endblock %}

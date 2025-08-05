@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="mb-4">Administrador de Empresa</h1>
+<form method="post" class="row g-3 mb-4">
+  <input type="hidden" name="action" value="assign">
+  <div class="col-md-4">
+    <label class="form-label">Usuario</label>
+    <select class="form-select" name="user_id">
+      {% for u in users %}
+      <option value="{{ u.id }}">{{ u.email }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Curso</label>
+    <select class="form-select" name="course_id">
+      {% for c in courses %}
+      <option value="{{ c.id }}">{{ c.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4 align-self-end">
+    <button class="btn btn-primary" type="submit">Asignar</button>
+  </div>
+</form>
+<form method="post" class="row g-3 mb-4">
+  <input type="hidden" name="action" value="unassign">
+  <div class="col-md-4">
+    <label class="form-label">Usuario</label>
+    <select class="form-select" name="user_id">
+      {% for u in users %}
+      <option value="{{ u.id }}">{{ u.email }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Curso</label>
+    <select class="form-select" name="course_id">
+      {% for c in courses %}
+      <option value="{{ c.id }}">{{ c.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4 align-self-end">
+    <button class="btn btn-secondary" type="submit">Desasignar</button>
+  </div>
+</form>
+<h2>Asignaciones Actuales</h2>
+<ul>
+  {% for e in enrollments %}
+  <li>{{ e.user.email }} - {{ e.course.title }}</li>
+  {% else %}
+  <li>Aún no hay asignaciones.</li>
+{% endfor %}
+</ul>
+{% endblock %}
+

@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-  <title>{{ page.title if page else 'Judaism Online' }}</title>
+  <title>{{ page.title if page else 'Monroy Asesores' }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
@@ -11,24 +11,33 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
+<nav class="navbar navbar-expand-lg navbar-dark mb-3">
   <div class="container-fluid">
-    <a class="navbar-brand" href="{{ url_for('index') }}">Judaism Online</a>
+    <a class="navbar-brand" href="{{ url_for('index') }}">Monroy Asesores</a>
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('blog') }}"><i class="fa-solid fa-blog me-1"></i>Blog</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('courses') }}"><i class="fa-solid fa-graduation-cap me-1"></i>Courses</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fa-solid fa-circle-info me-1"></i>About</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fa-solid fa-envelope me-1"></i>Contact</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('faq') }}"><i class="fa-solid fa-circle-question me-1"></i>FAQ</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('news') }}"><i class="fa-solid fa-newspaper me-1"></i>News</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('courses') }}"><i class="fa-solid fa-graduation-cap me-1"></i>Cursos</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fa-solid fa-circle-info me-1"></i>Nosotros</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fa-solid fa-envelope me-1"></i>Contacto</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('faq') }}"><i class="fa-solid fa-circle-question me-1"></i>Preguntas</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('news') }}"><i class="fa-solid fa-newspaper me-1"></i>Noticias</a></li>
       </ul>
+      {% if current_user %}
+        <a class="btn btn-outline-secondary ms-2" href="{{ url_for('user_logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Cerrar sesión</a>
+        {% if current_user.is_company_admin %}
+          <a class="btn btn-outline-secondary ms-2" href="{{ url_for('company_admin') }}"><i class="fa-solid fa-user-gear me-1"></i>Administrador de Empresa</a>
+        {% endif %}
+      {% else %}
+        <a class="btn btn-outline-secondary ms-2" href="{{ url_for('user_login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i>Iniciar sesión</a>
+        <a class="btn btn-outline-secondary ms-2" href="{{ url_for('register') }}"><i class="fa-solid fa-user-plus me-1"></i>Registrarse</a>
+      {% endif %}
       {% if config.get('SHOW_LOGIN') and request.remote_addr in ('127.0.0.1', '::1') %}
         {% if session.get('logged_in') %}
-          <a class="btn btn-outline-secondary" href="{{ url_for('admin') }}"><i class="fa-solid fa-user-gear me-1"></i>Admin</a>
-          <a class="btn btn-outline-secondary ms-2" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+          <a class="btn btn-outline-secondary ms-2" href="{{ url_for('admin') }}"><i class="fa-solid fa-user-gear me-1"></i>Admin</a>
+          <a class="btn btn-outline-secondary ms-2" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i>Cerrar sesión</a>
         {% else %}
-          <a class="btn btn-outline-secondary ms-2" href="{{ url_for('login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i>Login</a>
+          <a class="btn btn-outline-secondary ms-2" href="{{ url_for('login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i>Iniciar sesión</a>
         {% endif %}
       {% endif %}
     </div>
@@ -38,11 +47,11 @@
   {% block content %}{% endblock %}
 </div>
 <footer class="text-center mt-4">
-  <a href="{{ url_for('terms') }}">Terms &amp; Disclaimer</a>
+  <a href="{{ url_for('terms') }}">Términos y Aviso Legal</a>
 </footer>
 <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 1050;">
   <div class="spinner-border text-primary" role="status">
-    <span class="visually-hidden">Loading...</span>
+    <span class="visually-hidden">Cargando...</span>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
