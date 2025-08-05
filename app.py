@@ -16,6 +16,8 @@ from flask import (
     flash,
 )
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+import stripe
 
 from cryptography.fernet import Fernet
 import ollama
@@ -30,13 +32,17 @@ from reportlab.pdfgen import canvas
 import subprocess
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///site.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL",
+    "mysql+pymysql://beregrond:Caco101268123456!!@monroyasesores.com.mx/monroyas_education",
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
 app.config["GENERATING_STATIC"] = False
 app.config["SHOW_LOGIN"] = os.environ.get("SHOW_LOGIN") == "1"
 app.secret_key = os.environ.get("SECRET_KEY", "secret")
 db = SQLAlchemy(app)
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # Encryption key used to protect personal information
 _key = os.environ.get("ENCRYPT_KEY")
@@ -73,6 +79,21 @@ class BlogPost(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
+class Company(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), unique=True, nullable=False)
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(200), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    is_company_admin = db.Column(db.Boolean, default=False)
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"))
+    company = db.relationship("Company", backref="users")
+
+
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -81,6 +102,9 @@ class Course(db.Model):
     prerequisites = db.Column(db.Text)
     # Optional icon image filename stored in static/uploads
     icon = db.Column(db.String(200))
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"))
+    company = db.relationship("Company", backref="courses")
+    price_cents = db.Column(db.Integer, default=0)
 
 
 class CourseSection(db.Model):
@@ -104,6 +128,26 @@ class CourseSection(db.Model):
             cascade="all, delete-orphan",
         ),
     )
+
+
+class SectionProgress(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey("course_section.id"), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    user = db.relationship("User", backref="progress")
+    section = db.relationship("CourseSection", backref="progress")
+    __table_args__ = (db.UniqueConstraint("user_id", "section_id", name="uix_user_section"),)
+
+
+class Enrollment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
+    paid = db.Column(db.Boolean, default=False)
+    user = db.relationship("User", backref="enrollments")
+    course = db.relationship("Course", backref="enrollments")
+    __table_args__ = (db.UniqueConstraint("user_id", "course_id", name="uix_user_course"),)
 
 
 class QuizQuestion(db.Model):
@@ -175,6 +219,47 @@ def set_setting(key: str, value: str) -> None:
     db.session.commit()
 
 
+@app.context_processor
+def inject_user():
+    user_id = session.get("user_id")
+    user = User.query.get(user_id) if user_id else None
+    return {"current_user": user}
+
+
+def user_has_course_access(course: Course, user_id: int | None) -> bool:
+    """Check if a user can view a course."""
+    # Company courses require membership and an assignment
+    if course.company_id is not None:
+        if not user_id:
+            return False
+        user = User.query.get(user_id)
+        if not user or user.company_id != course.company_id:
+            return False
+        return (
+            Enrollment.query.filter_by(user_id=user_id, course_id=course.id).first()
+            is not None
+        )
+    # Paid open courses require an enrollment record
+    if course.price_cents > 0:
+        if not user_id:
+            return False
+        return (
+            Enrollment.query.filter_by(
+                user_id=user_id, course_id=course.id, paid=True
+            ).first()
+            is not None
+        )
+    # Free open courses are available to everyone
+    return True
+
+
+def require_course_access(course: Course):
+    user_id = session.get("user_id")
+    if not user_has_course_access(course, user_id):
+        return redirect(url_for("course_detail", course_id=course.id))
+    return None
+
+
 def require_login():
     if request.remote_addr not in ("127.0.0.1", "::1"):
         abort(403)
@@ -195,7 +280,7 @@ def generate_text(prompt: str) -> str:
 # Default feed for the news section. Individual deployments can override this
 # via the admin settings form.
 DEFAULT_NEWS_API_URL = (
-    "https://www.jta.org/wp-json/wp/v2/posts?categories=46947&per_page=5"
+    "https://newsdata.io/api/1/news?language=es&category=business&apikey=YOUR_API_KEY"
 )
 
 
@@ -206,25 +291,25 @@ def generate_blog_post() -> tuple[str, str]:
     try:
         resp = requests.get(news_api, timeout=10)
         resp.raise_for_status()
-        items = resp.json()
+        items = resp.json().get("results", [])
         if items:
-            topic = random.choice(items).get("title", {}).get("rendered")
+            topic = random.choice(items).get("title")
     except Exception:
         topic = None
 
-    site_topic = get_setting("site_topic", "Judaism")
-    date = datetime.datetime.utcnow().strftime("%B %d, %Y")
+    site_topic = get_setting("site_topic", "recursos humanos")
+    date = datetime.datetime.utcnow().strftime("%d/%m/%Y")
     if topic:
         prompt = (
-            f"Write a short blog post about {site_topic} inspired by this news topic: {topic}. "
-            f"Include today's date ({date}) in the text and do not mention the day of the week. "
-            "Start with a concise title summarizing the post on the first line, followed by a blank line and then the body."
+            f"Escribe una breve entrada de blog sobre {site_topic} inspirada en esta noticia: {topic}. "
+            f"Incluye la fecha de hoy ({date}) en el texto y no menciones el día de la semana. "
+            "Comienza con un título conciso en la primera línea, seguido de un salto de línea y luego el cuerpo."
         )
     else:
         prompt = (
-            f"Write a short blog post about an aspect of {site_topic}. "
-            f"Include today's date ({date}) in the text and do not mention the day of the week. "
-            "Start with a concise title summarizing the post on the first line, followed by a blank line and then the body."
+            f"Escribe una breve entrada de blog sobre algún aspecto de {site_topic}. "
+            f"Incluye la fecha de hoy ({date}) en el texto y no menciones el día de la semana. "
+            "Comienza con un título conciso en la primera línea, seguido de un salto de línea y luego el cuerpo."
         )
     response = generate_text(prompt).strip()
     lines = response.split("\n", 1)
@@ -429,6 +514,8 @@ def create_course(
     prerequisites: str = "",
     description: str | None = None,
     icon: str | None = None,
+    company_id: int | None = None,
+    price_cents: int = 0,
 ) -> Course:
     """Create a course with modules and quiz questions."""
     if not description:
@@ -439,6 +526,8 @@ def create_course(
         difficulty=difficulty,
         prerequisites=prerequisites,
         icon=icon,
+        company_id=company_id,
+        price_cents=price_cents,
     )
     db.session.add(course)
     db.session.commit()
@@ -500,103 +589,52 @@ def create_tables():
     if "icon" not in cols:
         with db.engine.begin() as conn:
             conn.execute(text("ALTER TABLE course ADD COLUMN icon VARCHAR(200)"))
+    if "company_id" not in cols:
+        with db.engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE course ADD COLUMN company_id INTEGER REFERENCES company(id)")
+            )
+    if "price_cents" not in cols:
+        with db.engine.begin() as conn:
+            conn.execute(text("ALTER TABLE course ADD COLUMN price_cents INTEGER DEFAULT 0"))
+    user_cols = [c["name"] for c in inspector.get_columns("user")]
+    if "is_company_admin" not in user_cols:
+        with db.engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE user ADD COLUMN is_company_admin BOOLEAN DEFAULT 0")
+            )
     # Initialize or update basic pages with richer default text
     default_pages = {
         "landing": (
-            "Welcome to Judaism Online!\n\n"
-            "## Our Mission\n"
-            "Judaism Online is dedicated to making the wisdom of Judaism accessible to everyone. "
-            "Through free articles, engaging courses and a welcoming community, we provide reliable "
-            "resources for anyone curious about Jewish life and tradition.\n\n"
-            "## What You'll Find\n"
-            "- Weekly articles exploring Jewish thought and practice\n"
-            "- Self-paced courses for beginners and advanced students\n"
-            "- Resources geared toward those considering conversion\n"
-            "- An open community forum for questions and discussion\n\n"
-            "## Join Us\n"
-            "Subscribe to our newsletter and follow us on social media to hear about new lessons, "
-            "upcoming events and the latest happenings across the Jewish world.\n\n"
-            "## Featured Topics\n"
-            "From ancient biblical history to modern Jewish ethics, our articles cover a wide "
-            "spectrum of subjects that help deepen your understanding of faith and tradition.\n\n"
-            "## Stay Connected\n"
-            "Sign up for our monthly bulletin for curated resources, upcoming webinars and community "
-            "spotlights. We value your privacy and will never share your information."
+            "Inicio",
+            "¡Bienvenido a Monroy Asesores!\n\nSomos una firma mexicana especializada en consultoría de Recursos Humanos, coaching ejecutivo y diseño organizacional. Explora nuestros cursos y artículos para potenciar el talento de tu empresa."
         ),
         "about": (
-            "Judaism Online grew out of a passion for sharing authentic Jewish knowledge with anyone "
-            "seeking to learn. Our team brings together educators from diverse backgrounds to curate "
-            "approachable content rooted in classical sources.\n\n"
-            "The site offers weekly blog posts, carefully designed courses and news updates from across "
-            "the Jewish world. Whether you're exploring Judaism for the first time or deepening long-held "
-            "traditions, we aim to provide tools for meaningful growth.\n\n"
-            "**Get involved:**\n"
-            "- Read our latest [blog posts](/blog/) and share your thoughts.\n"
-            "- Enroll in our [online courses](/courses/) to learn at your own pace.\n"
-            "- Contact us with suggestions or questions — we welcome your feedback.\n\n"
-            "## Our Approach\n"
-            "We balance respect for tradition with an inclusive perspective. Every article and course is "
-            "reviewed to ensure accuracy while remaining accessible to readers from any background.\n\n"
-            "## Our History\n"
-            "Judaism Online began as a small newsletter shared among friends who loved studying Torah together. "
-            "Over the years it has grown into an online destination for learners around the world seeking clear "
-            "explanations and inspirational teachings.\n\n"
-            "## Meet the Team\n"
-            "Our contributors include rabbis, educators and passionate community members. Each writer brings a "
-            "unique voice while sharing the same goal: to make Jewish wisdom approachable and engaging for everyone."
+            "Nosotros",
+            "Monroy Asesores ayuda a las organizaciones a desarrollar estrategias efectivas de capital humano. Ofrecemos coaching ejecutivo, desarrollo de estructuras organizacionales y formación especializada en español."
         ),
         "contact": (
-            "We would love to hear from you. For general inquiries please email "
-            "[info@judaismonline.example](mailto:info@judaismonline.example). "
-            "You can also reach us on social media or by using the form below.\n\n"
-            "**Mailing address:**\n"
-            "Judaism Online\n"
-            "123 Learning Lane\n"
-            "Springfield, USA\n\n"
-            "Follow us on your favorite social media platforms for the latest articles and community discussions. "
-            "You can find us on Facebook, Instagram and Twitter under the username **@JudaismOnline**.\n\n"
-            "We try to respond to all messages within two business days. Your questions and suggestions help us "
-            "improve the site for everyone."
+            "Contacto",
+            "Nos encantaría escucharte. Escríbenos a [info@monroyasesores.com.mx](mailto:info@monroyasesores.com.mx) o utiliza el formulario a continuación."
         ),
         "faq": (
-            "### What is Judaism Online?\n"
-            "Judaism Online is a free educational site offering articles, classes and news about Jewish life and tradition.\n\n"
-            "### Do I need any prior knowledge?\n"
-            "No prior background is required. Our beginner courses are designed for newcomers and those exploring conversion.\n\n"
-            "### Is the content free?\n"
-            "Yes. All articles and courses currently published on Judaism Online are available at no cost.\n\n"
-            "### Can I suggest a topic?\n"
-            "Absolutely! We welcome new ideas for articles and lessons. Use the contact form to send us your suggestions.\n\n"
-            "### How often is new content added?\n"
-            "We post new blog entries weekly and regularly expand our course offerings throughout the year.\n\n"
-            "### How do I enroll in a course?\n"
-            "Browse our course catalog and click the enrollment link on the course page. You'll receive email instructions for "
-            "accessing lessons and tracking your progress.\n\n"
-            "### Do you host live events?\n"
-            "Yes. We periodically offer webinars and virtual Q&A sessions with guest teachers. Event details are posted on our "
-            "homepage and social media channels."
+            "Preguntas Frecuentes",
+            "### ¿Qué ofrece Monroy Asesores?\nProveemos consultoría y cursos de Recursos Humanos orientados a empresas mexicanas.\n\n### ¿Los cursos tienen costo?\nAlgunos cursos son gratuitos y otros requieren pago o asignación por parte de tu empresa."
         ),
         "terms": (
-            "## Terms and Disclaimer\n"
-            "Any personal details you provide remain private and are used only to "
-            "run the site and send optional updates. All courses and articles are "
-            "offered free of charge. Certificates are also free, though you may "
-            "choose to contribute a small fee to help support the site's operating "
-            "costs. We never share your information.\n\n"
-            "### Disclaimer\n"
-            "Some content is generated with local AI models and may contain errors. "
-            "Always consult qualified authorities when making important decisions."
+            "Términos y Aviso Legal",
+            "## Términos\nTu información se utiliza únicamente para administrar el sitio y tus cursos.\n\n### Aviso Legal\nParte del contenido se genera con modelos de IA y puede contener errores."
         ),
     }
-    for slug, content in default_pages.items():
+    for slug, (title, content) in default_pages.items():
         page = Page.query.filter_by(slug=slug).first()
         if page is None:
-            db.session.add(Page(slug=slug, title=slug.capitalize(), content=content))
+            db.session.add(Page(slug=slug, title=title, content=content))
     db.session.commit()
     if not get_setting("admin_email") and os.environ.get("ADMIN_EMAIL"):
         set_setting("admin_email", os.environ.get("ADMIN_EMAIL"))
     if not get_setting("site_topic"):
-        set_setting("site_topic", "Judaism")
+        set_setting("site_topic", "recursos humanos")
     if not get_setting("news_api_url"):
         set_setting("news_api_url", DEFAULT_NEWS_API_URL)
     if not get_setting("hostgator_host") and os.environ.get("HOSTGATOR_HOST"):
@@ -623,7 +661,17 @@ def blog():
 
 @app.route("/courses/")
 def courses():
-    courses = Course.query.all()
+    user_id = session.get("user_id")
+    if user_id:
+        user = User.query.get(user_id)
+        if user and user.company_id:
+            courses = Course.query.filter(
+                (Course.company_id == None) | (Course.company_id == user.company_id)
+            ).all()
+        else:
+            courses = Course.query.filter(Course.company_id == None).all()
+    else:
+        courses = Course.query.filter(Course.company_id == None).all()
     return render_template("courses.html", courses=courses)
 
 
@@ -684,16 +732,123 @@ def logout():
     return redirect(url_for("index"))
 
 
+@app.route("/register/", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        company_name = request.form.get("company")
+        if not User.query.filter_by(email=email).first():
+            company = None
+            if company_name:
+                company = Company.query.filter_by(name=company_name).first()
+                if not company:
+                    company = Company(name=company_name)
+                    db.session.add(company)
+                    db.session.commit()
+            user = User(
+                email=email,
+                password_hash=generate_password_hash(password),
+                company=company,
+            )
+            db.session.add(user)
+            db.session.commit()
+            session["user_id"] = user.id
+            return redirect(url_for("index"))
+        flash("Correo ya registrado", "danger")
+    return render_template("register.html")
+
+
+@app.route("/user_login/", methods=["GET", "POST"])
+def user_login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password_hash, password):
+            session["user_id"] = user.id
+            return redirect(url_for("index"))
+        flash("Credenciales inválidas", "danger")
+    return render_template("user_login.html")
+
+
+@app.route("/user_logout/")
+def user_logout():
+    session.pop("user_id", None)
+    return redirect(url_for("index"))
+
+
+@app.route("/company_admin/", methods=["GET", "POST"])
+def company_admin():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("user_login"))
+    user = User.query.get_or_404(user_id)
+    if not user.is_company_admin:
+        abort(403)
+    if request.method == "POST":
+        action = request.form.get("action")
+        target_user_id = int(request.form.get("user_id"))
+        course_id = int(request.form.get("course_id"))
+        target_user = User.query.get_or_404(target_user_id)
+        course = Course.query.get_or_404(course_id)
+        if (
+            target_user.company_id != user.company_id
+            or course.company_id != user.company_id
+        ):
+            abort(403)
+        if action == "assign":
+            if not Enrollment.query.filter_by(
+                user_id=target_user_id, course_id=course_id
+            ).first():
+                db.session.add(
+                    Enrollment(
+                        user_id=target_user_id, course_id=course_id, paid=True
+                    )
+                )
+                db.session.commit()
+                flash("Curso asignado", "success")
+        elif action == "unassign":
+            Enrollment.query.filter_by(
+                user_id=target_user_id, course_id=course_id
+            ).delete()
+            db.session.commit()
+            flash("Curso desasignado", "info")
+        return redirect(url_for("company_admin"))
+    company_users = User.query.filter_by(company_id=user.company_id).all()
+    courses = Course.query.filter_by(company_id=user.company_id).all()
+    enrollments = (
+        Enrollment.query.join(User)
+        .filter(User.company_id == user.company_id)
+        .all()
+    )
+    return render_template(
+        "company_admin.html", users=company_users, courses=courses, enrollments=enrollments
+    )
+
+
 @app.route("/courses/<int:course_id>/")
 def course_detail(course_id):
     course = Course.query.get_or_404(course_id)
+    user_id = session.get("user_id")
+    if not user_has_course_access(course, user_id):
+        return render_template("course_paywall.html", course=course)
     sections = (
         CourseSection.query.filter_by(course_id=course_id)
         .order_by(CourseSection.order)
         .all()
     )
-    completed = session.get("completed_sections", {}).get(str(course_id), [])
-    all_done = sections and all(s.id in completed for s in sections)
+    if user_id:
+        completed = [
+            p.section_id
+            for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
+            .join(CourseSection)
+            .filter(CourseSection.course_id == course_id)
+            .all()
+        ]
+    else:
+        completed = session.get("completed_sections", {}).get(str(course_id), [])
+    all_done = bool(sections) and all(s.id in completed for s in sections)
     quiz_passed = session.get("quiz_passed", {}).get(str(course_id))
     return render_template(
         "course_detail.html",
@@ -706,15 +861,90 @@ def course_detail(course_id):
     )
 
 
+@app.route("/courses/<int:course_id>/enroll/", methods=["POST"])
+def enroll(course_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("user_login"))
+    course = Course.query.get_or_404(course_id)
+    if course.company_id is not None:
+        abort(403)
+    if course.price_cents <= 0:
+        enrollment = Enrollment.query.filter_by(user_id=user_id, course_id=course.id).first()
+        if not enrollment:
+            enrollment = Enrollment(user_id=user_id, course_id=course.id, paid=True)
+            db.session.add(enrollment)
+            db.session.commit()
+        return redirect(url_for("course_detail", course_id=course.id))
+    checkout = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[
+            {
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": course.title},
+                    "unit_amount": course.price_cents,
+                },
+                "quantity": 1,
+            }
+        ],
+        mode="payment",
+        success_url=url_for(
+            "enroll_success", course_id=course.id, _external=True
+        ) + "?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url=url_for("course_detail", course_id=course.id, _external=True),
+    )
+    return redirect(checkout.url)
+
+
+@app.route("/courses/<int:course_id>/success/")
+def enroll_success(course_id):
+    session_id = request.args.get("session_id")
+    if not session_id:
+        abort(400)
+    checkout = stripe.checkout.Session.retrieve(session_id)
+    if checkout.payment_status == "paid":
+        user_id = session.get("user_id")
+        if not user_id:
+            abort(400)
+        enrollment = Enrollment.query.filter_by(
+            user_id=user_id, course_id=course_id
+        ).first()
+        if not enrollment:
+            enrollment = Enrollment(
+                user_id=user_id, course_id=course_id, paid=True
+            )
+            db.session.add(enrollment)
+        else:
+            enrollment.paid = True
+        db.session.commit()
+        flash("Inscripción exitosa", "success")
+        return redirect(url_for("course_detail", course_id=course_id))
+    abort(400)
+
+
 @app.route("/certificate/<int:course_id>/", methods=["GET", "POST"])
 def certificate(course_id):
     course = Course.query.get_or_404(course_id)
+    resp = require_course_access(course)
+    if resp:
+        return resp
     sections = (
         CourseSection.query.filter_by(course_id=course_id)
         .order_by(CourseSection.order)
         .all()
     )
-    completed = session.get("completed_sections", {}).get(str(course_id), [])
+    user_id = session.get("user_id")
+    if user_id:
+        completed = [
+            p.section_id
+            for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
+            .join(CourseSection)
+            .filter(CourseSection.course_id == course_id)
+            .all()
+        ]
+    else:
+        completed = session.get("completed_sections", {}).get(str(course_id), [])
     quiz_passed = session.get("quiz_passed", {}).get(str(course_id))
     if sections and not all(s.id in completed for s in sections):
         abort(403)
@@ -744,6 +974,9 @@ def certificate(course_id):
 def course_full(course_id):
     """Display the entire course with all sections in one page."""
     course = Course.query.get_or_404(course_id)
+    resp = require_course_access(course)
+    if resp:
+        return resp
     sections = (
         CourseSection.query.filter_by(course_id=course_id)
         .order_by(CourseSection.order)
@@ -757,17 +990,30 @@ def course_full(course_id):
 )
 def course_section(course_id, section_id):
     course = Course.query.get_or_404(course_id)
+    resp = require_course_access(course)
+    if resp:
+        return resp
     section = CourseSection.query.get_or_404(section_id)
-    completed = session.get("completed_sections", {}).get(str(course_id), [])
+    user_id = session.get("user_id")
+    if user_id:
+        completed = [
+            p.section_id
+            for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
+            .join(CourseSection)
+            .filter(CourseSection.course_id == course_id)
+            .all()
+        ]
+    else:
+        completed = session.get("completed_sections", {}).get(str(course_id), [])
     if request.method == "POST":
+        correct = False
         if section.question and section.answer:
             answer = request.form.get("answer", "").strip().lower()
             if answer == section.answer.strip().lower():
-                completed.append(section_id)
-        else:
-            if request.form.get("complete"):
-                completed.append(section_id)
-        if section_id not in completed:
+                correct = True
+        elif request.form.get("complete"):
+            correct = True
+        if not correct:
             return render_template(
                 "course_section.html",
                 course=course,
@@ -775,8 +1021,22 @@ def course_section(course_id, section_id):
                 completed=False,
                 error=True,
             )
-        session.setdefault("completed_sections", {})[str(course_id)] = completed
-        session.modified = True
+        if user_id:
+            progress = SectionProgress.query.filter_by(
+                user_id=user_id, section_id=section_id
+            ).first()
+            if not progress:
+                progress = SectionProgress(
+                    user_id=user_id, section_id=section_id, completed=True
+                )
+                db.session.add(progress)
+            else:
+                progress.completed = True
+            db.session.commit()
+        else:
+            completed.append(section_id)
+            session.setdefault("completed_sections", {})[str(course_id)] = completed
+            session.modified = True
         return redirect(url_for("course_detail", course_id=course_id))
     return render_template(
         "course_section.html",
@@ -790,6 +1050,9 @@ def course_section(course_id, section_id):
 @app.route("/courses/<int:course_id>/quiz/", methods=["GET", "POST"])
 def course_quiz(course_id):
     course = Course.query.get_or_404(course_id)
+    resp = require_course_access(course)
+    if resp:
+        return resp
     questions = (
         QuizQuestion.query.filter_by(course_id=course_id)
         .order_by(QuizQuestion.order)
@@ -843,7 +1106,7 @@ def admin():
             db.session.delete(post)
             db.session.commit()
         elif action == "course":
-            topic = request.form.get("topic", "Judaism")
+            topic = request.form.get("topic", "recursos humanos")
             difficulty = request.form.get("difficulty", "Beginner")
             prerequisites = request.form.get("prerequisites", "")
             module_count = min(int(request.form.get("module_count", 3)), 10)
@@ -854,41 +1117,31 @@ def admin():
                 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
                 icon_name = secure_filename(file.filename)
                 file.save(os.path.join(app.config["UPLOAD_FOLDER"], icon_name))
-            if not description:
-                description = generate_course_overview(topic)
-            course = Course(
-                title=topic,
-                description=description,
+            company_name = request.form.get("company")
+            company = None
+            if company_name:
+                company = Company.query.filter_by(name=company_name).first()
+                if not company:
+                    company = Company(name=company_name)
+                    db.session.add(company)
+                    db.session.commit()
+            course = create_course(
+                topic,
+                module_count=module_count,
                 difficulty=difficulty,
                 prerequisites=prerequisites,
+                description=description or None,
                 icon=icon_name,
+                company_id=company.id if company else None,
             )
-            db.session.add(course)
+            session.setdefault("completed_sections", {}).pop(str(course.id), None)
+            session.setdefault("quiz_scores", {}).pop(str(course.id), None)
+            session.setdefault("quiz_passed", {}).pop(str(course.id), None)
+            SectionProgress.query.join(CourseSection).filter(
+                CourseSection.course_id == course.id
+            ).delete(synchronize_session=False)
             db.session.commit()
-            # Generate sections using the AI and store them
-            for sec in generate_course_sections(topic, module_count):
-                section = CourseSection(
-                    course_id=course.id,
-                    title=sec["title"],
-                    content=sec["content"],
-                    order=sec["order"],
-                )
-                db.session.add(section)
-            db.session.commit()
-            # Generate quiz questions for the course
-            for q in generate_quiz_questions(topic, 10):
-                question = QuizQuestion(
-                    course_id=course.id,
-                    question=q["question"],
-                    option_a=q["a"],
-                    option_b=q["b"],
-                    option_c=q["c"],
-                    option_d=q["d"],
-                    answer=q["answer"],
-                    order=q["order"],
-                )
-                db.session.add(question)
-            db.session.commit()
+            session.modified = True
         elif action == "update_course":
             course = Course.query.get_or_404(request.form.get("id"))
             course.title = request.form.get("title")
@@ -987,6 +1240,13 @@ def admin():
             for course in Course.query.all():
                 db.session.delete(course)
             db.session.commit()
+            # Remove any stored progress when wiping generated content
+            SectionProgress.query.delete()
+            db.session.commit()
+            session.pop("completed_sections", None)
+            session.pop("quiz_scores", None)
+            session.pop("quiz_passed", None)
+            session.modified = True
         elif action == "update_settings":
             set_setting("site_topic", request.form.get("site_topic", "").strip())
             set_setting("news_api_url", request.form.get("news_api_url", "").strip())
@@ -1024,7 +1284,7 @@ def admin():
     courses = Course.query.all()
     items = NewsItem.query.all()
     last_fetch = get_setting("last_news_fetch")
-    site_topic = get_setting("site_topic", "Judaism")
+    site_topic = get_setting("site_topic", "recursos humanos")
     news_api_url = get_setting("news_api_url", DEFAULT_NEWS_API_URL)
     hostgator_host = get_setting("hostgator_host", "")
     hostgator_username = get_setting("hostgator_username", "")
@@ -1065,14 +1325,14 @@ def deploy_hostgator_route():
             env=env,
             check=True,
         )
-        flash("Site deployed to HostGator.", "success")
+        flash("Sitio desplegado a HostGator.", "success")
         if result.stdout:
             flash(result.stdout, "info")
         if result.stderr:
             flash(result.stderr, "warning")
     except subprocess.CalledProcessError as e:
         output = (e.stdout or "") + (e.stderr or "")
-        flash(f"Deployment failed: {output}", "danger")
+        flash(f"El despliegue falló: {output}", "danger")
     return redirect(url_for("admin"))
 
 
@@ -1095,14 +1355,14 @@ def delete_hostgator_route():
             env=env,
             check=True,
         )
-        flash("Remote files deleted from HostGator.", "success")
+        flash("Archivos remotos eliminados de HostGator.", "success")
         if result.stdout:
             flash(result.stdout, "info")
         if result.stderr:
             flash(result.stderr, "warning")
     except subprocess.CalledProcessError as e:
         output = (e.stdout or "") + (e.stderr or "")
-        flash(f"Deletion failed: {output}", "danger")
+        flash(f"La eliminación falló: {output}", "danger")
     return redirect(url_for("admin"))
 
 

@@ -1,7 +1,6 @@
-# Judaism Online
+# Monroy Asesores
 
-This project provides a simple web application for free blog posts, courses and informational pages about Judaism.
-It uses the local Llama 3 model (via [Ollama](https://github.com/ollama/ollama)) to automatically generate content.
+Esta aplicación web ofrece publicaciones de blog, cursos y páginas informativas sobre consultoría de recursos humanos, coaching ejecutivo y desarrollo organizacional. Utiliza el modelo local Llama 3 (a través de [Ollama](https://github.com/ollama/ollama)) para generar contenido automáticamente.
 
 ## Features
 

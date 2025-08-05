@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card mb-4" data-aos="fade-up">
+  {% if course.icon %}
+  <img src="{{ url_for('static', filename='uploads/' ~ course.icon) }}" class="card-img-top" alt="Imagen del curso">
+  {% else %}
+  <img src="https://placehold.co/600x300?text=Course" class="card-img-top" alt="Imagen del curso">
+  {% endif %}
+  <div class="card-body">
+    <h1 class="card-title">{{ course.title }}</h1>
+    <p class="card-text">{{ course.description|markdown|safe }}</p>
+    <p class="card-text"><strong>Precio:</strong> ${{ '%.2f'|format(course.price_cents / 100) }}</p>
+    {% if not current_user %}
+    <p><a href="{{ url_for('user_login') }}">Iniciar sesión</a> o <a href="{{ url_for('register') }}">registrarse</a> para comprar este curso.</p>
+    {% else %}
+    <form method="post" action="{{ url_for('enroll', course_id=course.id) }}">
+      <button class="btn btn-primary">Comprar Curso</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

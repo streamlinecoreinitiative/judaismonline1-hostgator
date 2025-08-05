@@ -7,3 +7,5 @@ markdown
 beautifulsoup4
 cryptography
 reportlab
+pymysql
+stripe

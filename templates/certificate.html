@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 {% if sent %}
-<div class="alert alert-success">Certificate emailed to {{ name }}.</div>
+<div class="alert alert-success">Certificado enviado por correo a {{ name }}.</div>
 {% elif name %}
 <body onload="window.print()" class="p-5">
-<h1>Certificate of Completion</h1>
-<p>Congratulations {{ name }} on completing the course: {{ course.title }}</p>
-<h2 class="mt-4">Course Sections</h2>
+<h1>Certificado de Finalización</h1>
+<p>Felicidades {{ name }} por completar el curso: {{ course.title }}</p>
+<h2 class="mt-4">Secciones del Curso</h2>
 <ul>
   {% for s in sections %}
   <li>{{ s.title }}</li>
@@ -16,12 +16,12 @@
 {% else %}
 <form method="post" id="cert-form">
   <div class="mb-3">
-    <label for="name" class="form-label">Your Name</label>
-    <input class="form-control" id="name" name="name" placeholder="Your name">
+    <label for="name" class="form-label">Tu nombre</label>
+    <input class="form-control" id="name" name="name" placeholder="Tu nombre">
   </div>
   <div class="mb-3">
-    <label for="email" class="form-label">Email</label>
-    <input class="form-control" id="email" name="email" placeholder="you@example.com">
+    <label for="email" class="form-label">Correo electrónico</label>
+    <input class="form-control" id="email" name="email" placeholder="tu@ejemplo.com">
   </div>
 </form>
 <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
