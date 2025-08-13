@@ -317,6 +317,8 @@ def generate_blog_post() -> tuple[str, str]:
     response = generate_text(prompt).strip()
     lines = response.split("\n", 1)
     title = lines[0].strip()
+    # Limpiar markdown del título
+    title = title.replace("**", "").replace("##", "").replace("#", "").strip()
     content = lines[1].strip() if len(lines) > 1 else ""
     return title, content
 
@@ -563,22 +565,44 @@ def create_course(
 def fetch_news_items() -> None:
     """Fetch latest news from the API and store new items."""
     news_api = get_setting("news_api_url") or get_news_api_url()
-    resp = requests.get(news_api, timeout=10)
-    resp.raise_for_status()
-    for item in resp.json():
-        title = item.get("title", {}).get("rendered", "")
-        url = item.get("link", "")
-        summary = item.get("excerpt", {}).get("rendered", "")
-        if not NewsItem.query.filter_by(url=url).first():
-            db.session.add(NewsItem(title=title, url=url, summary=summary))
-    db.session.commit()
-    # Keep only the 25 most recent items
-    old_items = NewsItem.query.order_by(NewsItem.created_at.desc()).offset(25).all()
-    for item in old_items:
-        db.session.delete(item)
-    if old_items:
+    try:
+        resp = requests.get(news_api, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        # Puede ser lista o dict o string
+        if isinstance(data, dict):
+            items = data.get("results") or data.get("articles") or []
+            if not isinstance(items, list):
+                items = [items]
+        elif isinstance(data, list):
+            items = data
+        else:
+            items = []
+        for item in items:
+            if isinstance(item, dict):
+                title = item.get("title")
+                if isinstance(title, dict):
+                    title = title.get("rendered", "")
+                url = item.get("link") or item.get("url", "")
+                summary = item.get("excerpt")
+                if isinstance(summary, dict):
+                    summary = summary.get("rendered", "")
+                summary = summary or item.get("description", "")
+                if summary is None:
+                    summary = ""
+                if not NewsItem.query.filter_by(url=url).first():
+                    db.session.add(NewsItem(title=title or "", url=url or "", summary=summary, created_at=datetime.datetime.utcnow()))
         db.session.commit()
-    set_setting("last_news_fetch", datetime.datetime.utcnow().isoformat())
+        # Keep only the 25 most recent items
+        old_items = NewsItem.query.order_by(NewsItem.created_at.desc()).offset(25).all()
+        for item in old_items:
+            db.session.delete(item)
+        if old_items:
+            db.session.commit()
+        set_setting("last_news_fetch", datetime.datetime.utcnow().isoformat())
+    except Exception as e:
+        # Loguea el error pero no detiene el flujo
+        print(f"[WARN] fetch_news_items error: {e}")
 
 
 def create_tables():
@@ -1140,9 +1164,18 @@ def admin():
             session.setdefault("completed_sections", {}).pop(str(course.id), None)
             session.setdefault("quiz_scores", {}).pop(str(course.id), None)
             session.setdefault("quiz_passed", {}).pop(str(course.id), None)
-            SectionProgress.query.join(CourseSection).filter(
+            
+            # Delete section progress for this course
+            section_ids = db.session.query(CourseSection.id).filter(
                 CourseSection.course_id == course.id
+            ).subquery()
+            
+            SectionProgress.query.filter(
+                SectionProgress.section_id.in_(
+                    db.session.query(section_ids.c.id)
+                )
             ).delete(synchronize_session=False)
+            
             db.session.commit()
             session.modified = True
         elif action == "update_course":

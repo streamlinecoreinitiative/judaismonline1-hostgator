@@ -1,11 +1,25 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="hero text-center mb-4">
-    <h1 class="display-4" data-aos="fade-down">{{ page.title }}</h1>
-    <p class="lead mb-3" data-aos="fade-up">Explora artículos y cursos para profundizar tu conocimiento.</p>
-    <a class="btn btn-primary btn-lg" href="{{ url_for('courses') }}" data-aos="zoom-in">Ver Cursos</a>
+  <div class="hero-banner mb-5">
+    <div class="hero-image-container">
+      <img src="{{ url_for('static', filename='hero.jpg') }}" alt="Monroy Asesores - Servicios Profesionales" class="hero-image" loading="eager">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-content">
+      <h1 class="hero-title mb-3" data-aos="fade-down">{{ page.title }}</h1>
+      <p class="hero-subtitle mb-4" data-aos="fade-up">Explora artículos y cursos para profundizar tu conocimiento.</p>
+      <div class="hero-buttons" data-aos="zoom-in">
+        <a class="btn btn-primary btn-lg me-3" href="{{ url_for('courses') }}">
+          <i class="fa-solid fa-graduation-cap me-2"></i>Ver Cursos
+        </a>
+        <a class="btn btn-outline-light btn-lg" href="{{ url_for('contact') }}">
+          <i class="fa-solid fa-envelope me-2"></i>Contactar
+        </a>
+      </div>
+    </div>
   </div>
-  <div data-aos="fade-up">
+  
+  <div class="content-section" data-aos="fade-up">
     {{ page.content|markdown|safe }}
   </div>
 {% endblock %}

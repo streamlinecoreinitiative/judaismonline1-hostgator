@@ -16,6 +16,8 @@ def fetch_news():
         title = item.get("title", "")
         url = item.get("link") or item.get("url", "")
         summary = item.get("description", "")
+        if summary is None:
+            summary = ""
         if not NewsItem.query.filter_by(url=url).first():
             db.session.add(NewsItem(title=title, url=url, summary=summary))
     db.session.commit()

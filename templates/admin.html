@@ -214,7 +214,7 @@
     <div id="collapseImages" class="accordion-collapse collapse" aria-labelledby="headingImages" data-bs-parent="#adminAccordion">
       <div class="accordion-body">
         <h3>Imagen Principal</h3>
-        <img src="{{ url_for('static', filename='hero.jpg') }}" class="img-fluid mb-2" style="max-width:200px">
+        <img src="https://images.unsplash.com/photo-1465101178521-c1a9136a3b41?auto=format&fit=crop&w=1200&q=80" class="img-fluid mb-2" style="max-width:200px">
         <form method="post" enctype="multipart/form-data" class="mb-2">
           <input type="hidden" name="action" value="upload_image">
           <input type="hidden" name="slug" value="hero">
@@ -293,7 +293,7 @@
     </div>
   </div>
 </div>
-<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+<script src="https://cdn.ckeditor.com/4.25.1-lts/standard/ckeditor.js"></script>
 <script>
   CKEDITOR.replace('new_description');
   document.querySelectorAll('textarea.blog-content').forEach(function(el){

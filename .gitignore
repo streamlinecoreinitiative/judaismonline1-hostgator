@@ -1,3 +1,5 @@
 site.db
 __pycache__/
 build/
+.deploy_cache.json
+.env

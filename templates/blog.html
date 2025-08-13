@@ -3,9 +3,14 @@
 <h1 data-aos="fade-down">Blog</h1>
 {% for post in posts %}
   <div class="mb-4" data-aos="fade-up">
-    <h2>{{ post.title }}</h2>
-    <p class="text-muted">{{ post.created_at.strftime('%d/%m/%Y') }}</p>
-    <p>{{ post.content|markdown|safe }}</p>
+    <h2>{{ post.title|markdown|striptags }}</h2>
+    <p class="text-muted">
+      <small>
+        <i class="fa-solid fa-calendar me-1"></i>{{ post.created_at.strftime('%d de %B de %Y') }} |
+        <i class="fa-solid fa-building me-1"></i>Educación Monroy Asesores
+      </small>
+    </p>
+    <div>{{ post.content|markdown|safe }}</div>
   </div>
 {% else %}
   <p>Aún no hay publicaciones.</p>
