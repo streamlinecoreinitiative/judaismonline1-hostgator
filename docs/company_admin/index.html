@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-  <title>Contacto</title>
+  <title>Monroy Asesores</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
@@ -19,12 +19,12 @@
         <li class="nav-item"><a class="nav-link" href="../blog/index.html"><i class="fa-solid fa-blog me-1"></i>Blog</a></li>
         <li class="nav-item"><a class="nav-link" href="../courses/index.html"><i class="fa-solid fa-graduation-cap me-1"></i>Cursos</a></li>
         <li class="nav-item"><a class="nav-link" href="../about/index.html"><i class="fa-solid fa-circle-info me-1"></i>Nosotros</a></li>
-        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-envelope me-1"></i>Contacto</a></li>
+        <li class="nav-item"><a class="nav-link" href="../contact/index.html"><i class="fa-solid fa-envelope me-1"></i>Contacto</a></li>
         <li class="nav-item"><a class="nav-link" href="../faq/index.html"><i class="fa-solid fa-circle-question me-1"></i>Preguntas</a></li>
         <li class="nav-item"><a class="nav-link" href="../news/index.html"><i class="fa-solid fa-newspaper me-1"></i>Noticias</a></li>
       </ul>
       
-        <a class="btn btn-outline-secondary ms-2" href="../user_login/index.html"><i class="fa-solid fa-right-to-bracket me-1"></i>Iniciar sesión</a>
+        <a class="btn btn-outline-secondary ms-2" href="index.html"><i class="fa-solid fa-right-to-bracket me-1"></i>Iniciar sesión</a>
         <a class="btn btn-outline-secondary ms-2" href="../register/index.html"><i class="fa-solid fa-user-plus me-1"></i>Registrarse</a>
       
       
@@ -33,25 +33,18 @@
 </nav>
 <div class="container">
   
-  <h1 data-aos="fade-down">Contacto</h1>
-  <div data-aos="fade-up"><p>Nos encantaría escucharte. Escríbenos a <a href="mailto:info@monroyasesores.com.mx">info@monroyasesores.com.mx</a> o utiliza el formulario a continuación.</p></div>
-  
-  <form class="mt-4" method="post" data-aos="fade-up">
-    <div class="mb-3">
-      <label class="form-label" for="name">Nombre</label>
-      <input type="text" class="form-control" id="name" name="name" placeholder="Tu nombre">
-    </div>
-    <div class="mb-3">
-      <label class="form-label" for="email">Correo electrónico</label>
-      <input type="email" class="form-control" id="email" name="email" placeholder="tu@ejemplo.com">
-    </div>
-    <div class="mb-3">
-      <label class="form-label" for="message">Mensaje</label>
-      <textarea class="form-control" id="message" name="message" rows="4" placeholder="¿Cómo podemos ayudarte?"></textarea>
-    </div>
-    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1"></i>Enviar</button>
-  </form>
-  <img src="../static/contact.jpg" alt="Contact us" class="img-fluid my-4" data-aos="zoom-in">
+<h1>Iniciar Sesión</h1>
+<form method="post" class="show-spinner">
+  <div class="mb-3">
+    <label class="form-label">Correo electrónico</label>
+    <input type="email" class="form-control" name="email" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Contraseña</label>
+    <input type="password" class="form-control" name="password" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Entrar</button>
+</form>
 
 </div>
 <footer class="text-center mt-4">

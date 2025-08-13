@@ -23,8 +23,18 @@ import subprocess
 import sys
 
 # Generate static site by running update_site.py which calls daily_post, update_news and freeze
-print("Running update_site.py to generate static site...")
-subprocess.run([sys.executable, "update_site.py"], check=True)
+
+print("[INFO] Running update_site.py to generate static site...")
+try:
+    result = subprocess.run([sys.executable, "update_site.py"], capture_output=True, text=True, check=True)
+    print("[INFO] update_site.py STDOUT:\n" + (result.stdout or ""))
+    if result.stderr:
+        print("[INFO] update_site.py STDERR:\n" + result.stderr)
+except subprocess.CalledProcessError as e:
+    print("[ERROR] update_site.py failed!")
+    print("[ERROR] STDOUT:\n" + (e.stdout or ""))
+    print("[ERROR] STDERR:\n" + (e.stderr or ""))
+    sys.exit(1)
 
 # Read FTP credentials from environment variables
 ftp_host = os.environ.get("HOSTGATOR_HOST")
@@ -32,10 +42,14 @@ ftp_user = os.environ.get("HOSTGATOR_USERNAME")
 ftp_pass = os.environ.get("HOSTGATOR_PASSWORD")
 remote_base = os.environ.get("HOSTGATOR_REMOTE_PATH", "/public_html")
 
+
+print(f"[INFO] FTP_HOST: {ftp_host}")
+print(f"[INFO] FTP_USER: {ftp_user}")
+print(f"[INFO] FTP_PASS: {'*' * len(ftp_pass) if ftp_pass else None}")
+print(f"[INFO] REMOTE_PATH: {remote_base}")
 if not all([ftp_host, ftp_user, ftp_pass]):
-    raise RuntimeError(
-        "Please set HOSTGATOR_HOST, HOSTGATOR_USERNAME and HOSTGATOR_PASSWORD environment variables."
-    )
+    print("[ERROR] Please set HOSTGATOR_HOST, HOSTGATOR_USERNAME and HOSTGATOR_PASSWORD environment variables.")
+    sys.exit(2)
 
 local_dir = "docs"
 
@@ -73,9 +87,14 @@ def upload_directory(ftp: ftplib.FTP, local_path: str, remote_path: str):
         # Reset to root remote path before descending to next directory
         ftp.cwd(remote_path)
 
-print(f"Connecting to FTP server {ftp_host}...")
-with ftplib.FTP(ftp_host) as ftp:
-    ftp.login(user=ftp_user, passwd=ftp_pass)
-    print("Connected. Uploading files...")
-    upload_directory(ftp, local_dir, remote_base)
-    print("Upload complete.")
+
+try:
+    print(f"[INFO] Connecting to FTP server {ftp_host}...")
+    with ftplib.FTP(ftp_host) as ftp:
+        ftp.login(user=ftp_user, passwd=ftp_pass)
+        print("[INFO] Connected. Uploading files...")
+        upload_directory(ftp, local_dir, remote_base)
+        print("[INFO] Upload complete.")
+except ftplib.all_errors as e:
+    print(f"[ERROR] FTP error: {e}")
+    sys.exit(3)

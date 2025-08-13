@@ -1,4 +1,6 @@
 import datetime
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import sys
 from io import BytesIO
@@ -34,7 +36,7 @@ import subprocess
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL",
-    "mysql+pymysql://beregrond:Caco101268123456!!@monroyasesores.com.mx/monroyas_education",
+    "mysql+pymysql://monroyas_beregrond:Caco101268123456!!@monroyasesores.com.mx/monroyas_education",
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
@@ -279,15 +281,16 @@ def generate_text(prompt: str) -> str:
 
 # Default feed for the news section. Individual deployments can override this
 # via the admin settings form.
-DEFAULT_NEWS_API_URL = (
-    "https://newsdata.io/api/1/news?language=es&category=business&apikey=YOUR_API_KEY"
-)
+
+def get_news_api_url():
+    api_key = os.environ.get('NEWSDATA_API_KEY', 'YOUR_API_KEY')
+    return f"https://newsdata.io/api/1/news?language=es&category=business&apikey={api_key}"
 
 
 def generate_blog_post() -> tuple[str, str]:
     """Create a blog post and return a ``(title, content)`` tuple."""
     topic = None
-    news_api = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
+    news_api = get_setting("news_api_url") or get_news_api_url()
     try:
         resp = requests.get(news_api, timeout=10)
         resp.raise_for_status()
@@ -559,7 +562,7 @@ def create_course(
 
 def fetch_news_items() -> None:
     """Fetch latest news from the API and store new items."""
-    news_api = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
+    news_api = get_setting("news_api_url") or get_news_api_url()
     resp = requests.get(news_api, timeout=10)
     resp.raise_for_status()
     for item in resp.json():
@@ -636,7 +639,7 @@ def create_tables():
     if not get_setting("site_topic"):
         set_setting("site_topic", "recursos humanos")
     if not get_setting("news_api_url"):
-        set_setting("news_api_url", DEFAULT_NEWS_API_URL)
+        set_setting("news_api_url", get_news_api_url())
     if not get_setting("hostgator_host") and os.environ.get("HOSTGATOR_HOST"):
         set_setting("hostgator_host", os.environ.get("HOSTGATOR_HOST"))
     if not get_setting("hostgator_username") and os.environ.get("HOSTGATOR_USERNAME"):
@@ -1285,7 +1288,7 @@ def admin():
     items = NewsItem.query.all()
     last_fetch = get_setting("last_news_fetch")
     site_topic = get_setting("site_topic", "recursos humanos")
-    news_api_url = get_setting("news_api_url", DEFAULT_NEWS_API_URL)
+    news_api_url = get_setting("news_api_url", get_news_api_url())
     hostgator_host = get_setting("hostgator_host", "")
     hostgator_username = get_setting("hostgator_username", "")
     hostgator_password = get_setting("hostgator_password", "")
@@ -1318,18 +1321,25 @@ def deploy_hostgator_route():
         "HOSTGATOR_REMOTE_PATH": get_setting("hostgator_path", "/public_html"),
     })
     try:
+        venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "bin", "python")
+        if not os.path.exists(venv_python):
+            venv_python = sys.executable  # fallback
         result = subprocess.run(
-            [sys.executable, "deploy_hostgator.py"],
+            [venv_python, "deploy_hostgator.py"],
             capture_output=True,
             text=True,
             env=env,
             check=True,
         )
-        flash("Sitio desplegado a HostGator.", "success")
+        # Mostrar log detallado en el admin
+        log_lines = []
         if result.stdout:
-            flash(result.stdout, "info")
+            log_lines.append("<b>STDOUT:</b><br>" + result.stdout.replace("\n", "<br>"))
         if result.stderr:
-            flash(result.stderr, "warning")
+            log_lines.append("<b>STDERR:</b><br>" + result.stderr.replace("\n", "<br>"))
+        if log_lines:
+            flash("<br>".join(log_lines), "info")
+        flash("Sitio desplegado a HostGator.", "success")
     except subprocess.CalledProcessError as e:
         output = (e.stdout or "") + (e.stderr or "")
         flash(f"El despliegue falló: {output}", "danger")
@@ -1348,18 +1358,25 @@ def delete_hostgator_route():
         "HOSTGATOR_REMOTE_PATH": get_setting("hostgator_path", "/public_html"),
     })
     try:
+        venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "bin", "python")
+        if not os.path.exists(venv_python):
+            venv_python = sys.executable  # fallback
         result = subprocess.run(
-            [sys.executable, "delete_hostgator.py"],
+            [venv_python, "delete_hostgator.py"],
             capture_output=True,
             text=True,
             env=env,
             check=True,
         )
-        flash("Archivos remotos eliminados de HostGator.", "success")
+        # Mostrar log detallado en el admin
+        log_lines = []
         if result.stdout:
-            flash(result.stdout, "info")
+            log_lines.append("<b>STDOUT:</b><br>" + result.stdout.replace("\n", "<br>"))
         if result.stderr:
-            flash(result.stderr, "warning")
+            log_lines.append("<b>STDERR:</b><br>" + result.stderr.replace("\n", "<br>"))
+        if log_lines:
+            flash("<br>".join(log_lines), "info")
+        flash("Archivos remotos eliminados de HostGator.", "success")
     except subprocess.CalledProcessError as e:
         output = (e.stdout or "") + (e.stderr or "")
         flash(f"La eliminación falló: {output}", "danger")

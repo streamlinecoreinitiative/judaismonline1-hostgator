@@ -1,10 +1,13 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 import requests
-from app import db, NewsItem, get_setting, DEFAULT_NEWS_API_URL
+from app import db, NewsItem, get_setting, get_news_api_url
 
 # Default feed used if no custom URL is configured.
 
 def fetch_news():
-    api_url = get_setting("news_api_url") or DEFAULT_NEWS_API_URL
+    api_url = get_setting("news_api_url") or get_news_api_url()
     resp = requests.get(api_url, timeout=10)
     resp.raise_for_status()
     data = resp.json()
