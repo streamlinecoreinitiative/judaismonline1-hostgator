@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Términos y Aviso Legal</title>
+  <title>Monroy Asesores</title>
   <link rel="icon" type="image/png" href="../static/tab.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,30 +39,35 @@
 </nav>
 <div class="container flex-grow-1">
   
-  <h1 data-aos="fade-down">Términos y Aviso Legal</h1>
-  <div data-aos="fade-up"><h2>Términos</h2>
-<p>Tu información se utiliza únicamente para administrar el sitio y tus cursos.</p>
-<h3>Aviso Legal</h3>
-<p>Parte del contenido se genera con modelos de IA y puede contener errores.</p></div>
-  
-  
-    <div class="page-image-banner mb-4">
-      <img src="../static/terms.jpg" 
-           alt="Imagen de Términos y Aviso Legal" 
-           class="img-fluid rounded shadow" 
-           style="max-height: 300px; width: 100%; object-fit: cover;"
-           data-aos="zoom-in" 
-           loading="lazy">
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-4 mx-auto">
+      <h2>Restablecer Contraseña</h2>
+      
+      
+        
+      
+      
+      <form method="POST">
+        <div class="mb-3">
+          <label for="email" class="form-label">Correo Electrónico</label>
+          <input type="email" class="form-control" id="email" name="email" required>
+          <div class="form-text">Te enviaremos un enlace para restablecer tu contraseña.</div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary w-100">Enviar Enlace</button>
+      </form>
+      
+      <div class="text-center mt-3">
+        <a href="../user_login/index.html">Volver al inicio de sesión</a>
+      </div>
     </div>
-  
-  
-  <div class="page-header mb-4">
-    
   </div>
+</div>
 
 </div>
 <footer class="text-center mt-4 mt-auto py-3 bg-light border-top">
-  <a href="index.html">Términos y Aviso Legal</a>
+  <a href="../terms/index.html">Términos y Aviso Legal</a>
 </footer>
 <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 1050;">
   <div class="spinner-border text-primary" role="status">

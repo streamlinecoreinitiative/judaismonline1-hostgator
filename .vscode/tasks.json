@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Deploy site to HostGator via deploy_hostgator.py",
+			"command": "python3 deploy_hostgator.py",
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}

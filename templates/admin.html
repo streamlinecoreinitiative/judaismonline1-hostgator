@@ -18,8 +18,74 @@
           <div class="mb-1">URL de Noticias:
             <input type="text" name="news_api_url" class="form-control" value="{{ news_api_url }}">
           </div>
+          <div class="mb-1">Moneda:
+            <select name="currency" class="form-control">
+              <option value="USD" {% if currency == "USD" %}selected{% endif %}>USD ($)</option>
+              <option value="EUR" {% if currency == "EUR" %}selected{% endif %}>EUR (€)</option>
+              <option value="MXN" {% if currency == "MXN" %}selected{% endif %}>MXN ($)</option>
+              <option value="GBP" {% if currency == "GBP" %}selected{% endif %}>GBP (£)</option>
+            </select>
+          </div>
           <button class="btn btn-primary" type="submit">Guardar Configuración</button>
         </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Gestión de Empresas -->
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingCompanies">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCompanies" aria-expanded="false" aria-controls="collapseCompanies">
+        Gestión de Empresas
+      </button>
+    </h2>
+    <div id="collapseCompanies" class="accordion-collapse collapse" aria-labelledby="headingCompanies" data-bs-parent="#adminAccordion">
+      <div class="accordion-body">
+        <h5>Crear Nueva Empresa</h5>
+        <form method="post" class="mb-4">
+          <input type="hidden" name="action" value="create_company">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Nombre de la Empresa</label>
+                <input type="text" name="company_name" class="form-control" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Email del Administrador</label>
+                <input type="email" name="admin_email" class="form-control" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Contraseña del Administrador</label>
+                <input type="password" name="admin_password" class="form-control" required minlength="6">
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-success" type="submit">Crear Empresa y Administrador</button>
+        </form>
+        
+        <h5>Empresas Existentes</h5>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Administrador</th>
+                <th>Usuarios</th>
+                <th>Cursos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- This section would need to be populated with company data -->
+              <tr>
+                <td colspan="4" class="text-muted">Las empresas aparecerán aquí una vez creadas</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -68,6 +134,7 @@
           <div class="mb-1">Dificultad: <input type="text" name="difficulty" value="Principiante"></div>
           <div class="mb-1">Requisitos previos: <input type="text" name="prerequisites"></div>
           <div class="mb-1">Número de Módulos (máx 10): <input type="number" name="module_count" value="3" min="1" max="10"></div>
+          <div class="mb-1">Precio (en centavos, 0 = gratis): <input type="number" name="price_cents" value="0" min="0"></div>
           <div class="mb-1">
             Descripción:
             <textarea name="description" id="new_description" class="form-control" rows="4"></textarea>

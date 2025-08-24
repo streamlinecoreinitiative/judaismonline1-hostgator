@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="mb-4">Cursos</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Cursos</h1>
+  <a href="{{ url_for('my_courses') }}" class="btn btn-outline-primary">
+    <i class="fas fa-certificate"></i> Mis Cursos Completados
+  </a>
+</div>
+
 <div class="row">
 {% for course in courses %}
-  <div class="col-md-4 course-card" data-aos="fade-up">
+  <div class="col-md-4 course-card mb-4" data-aos="fade-up">
     <div class="card h-100">
       {% if course.icon %}
       <img src="{{ url_for('static', filename='uploads/' ~ course.icon) }}" class="card-img-top" alt="Imagen del curso">
@@ -12,13 +18,52 @@
       {% endif %}
       <div class="card-body d-flex flex-column">
         <h5 class="card-title">{{ course.title }}</h5>
-        <p class="card-text"><i class="fa-solid fa-signal me-1"></i>{{ course.difficulty }}{% if course.price_cents > 0 %} - ${{ '%.2f'|format(course.price_cents / 100) }}{% endif %}</p>
-        <a class="btn btn-primary mt-auto" href="{{ url_for('course_detail', course_id=course.id) }}">Ver Curso</a>
+        <p class="card-text">
+          <i class="fa-solid fa-signal me-1"></i>{{ course.difficulty }}
+          {% if course.price_cents and course.price_cents > 0 %}
+            <br><i class="fas fa-certificate me-1"></i>Certificado: {{ format_price(course.price_cents) }}
+          {% else %}
+            <br><i class="fas fa-certificate me-1"></i>Certificado: Gratuito
+          {% endif %}
+        </p>
+        
+        <!-- Estado del curso -->
+        {% set progress = course_progress.get(course.id, {}) %}
+        {% if progress.is_assigned %}
+          <div class="alert alert-info alert-sm mb-2">
+            <i class="fas fa-building"></i> Asignado por tu empresa
+          </div>
+        {% endif %}
+        
+        {% if progress.completed %}
+          <div class="alert alert-success alert-sm mb-2">
+            <i class="fas fa-check-circle"></i> Completado
+          </div>
+        {% elif progress.in_progress %}
+          <div class="alert alert-warning alert-sm mb-2">
+            <i class="fas fa-clock"></i> En progreso
+          </div>
+        {% endif %}
+        
+        <a class="btn btn-primary mt-auto" href="{{ url_for('course_detail', course_id=course.id) }}">
+          {% if progress.completed %}
+            Revisar Curso
+          {% elif progress.in_progress %}
+            Continuar
+          {% else %}
+            Comenzar
+          {% endif %}
+        </a>
       </div>
     </div>
   </div>
 {% else %}
-  <p>Aún no hay cursos.</p>
+  <div class="col-12">
+    <div class="alert alert-info text-center">
+      <h4>No hay cursos disponibles</h4>
+      <p>Aún no hay cursos para mostrar.</p>
+    </div>
+  </div>
 {% endfor %}
 </div>
 {% endblock %}

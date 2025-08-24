@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Pago de Certificado - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-6 mx-auto">
+      <h1>Obtener Certificado</h1>
+      
+      <div class="card">
+        <div class="card-body">
+          <h4>{{ course.title }}</h4>
+          <p>¡Felicidades por completar el curso! Para obtener tu certificado oficial, necesitas realizar el pago.</p>
+          
+          <div class="alert alert-info">
+            <strong>Precio del Certificado:</strong> {{ format_price(course.price_cents) }}
+          </div>
+          
+          <div class="text-center">
+            <button id="paypal-button" class="btn btn-primary btn-lg">
+              <i class="fab fa-paypal"></i> Pagar con PayPal
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency={{ currency }}"></script>
+<script>
+document.getElementById('paypal-button').addEventListener('click', function() {
+  fetch('/paypal/create/{{ course.id }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      alert('Error: ' + data.error);
+      return;
+    }
+    
+    // Find approval URL
+    const approvalUrl = data.links.find(link => link.rel === 'approve');
+    if (approvalUrl) {
+      window.location.href = approvalUrl.href;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error al procesar el pago');
+  });
+});
+</script>
+{% endblock %}

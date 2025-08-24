@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Monroy Asesores</title>
-  <link rel="icon" type="image/png" href="../static/logo.png">
+  <link rel="icon" type="image/png" href="../static/tab.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
@@ -22,14 +22,15 @@
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item"><a class="nav-link" href="../blog/index.html"><i class="fa-solid fa-blog me-1"></i>Blog</a></li>
-        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fa-solid fa-graduation-cap me-1"></i>Cursos</a></li>
+        <li class="nav-item"><a class="nav-link" href="../courses/index.html"><i class="fa-solid fa-graduation-cap me-1"></i>Cursos</a></li>
+        
         <li class="nav-item"><a class="nav-link" href="../about/index.html"><i class="fa-solid fa-circle-info me-1"></i>Nosotros</a></li>
         <li class="nav-item"><a class="nav-link" href="../contact/index.html"><i class="fa-solid fa-envelope me-1"></i>Contacto</a></li>
         <li class="nav-item"><a class="nav-link" href="../faq/index.html"><i class="fa-solid fa-circle-question me-1"></i>Preguntas</a></li>
         <li class="nav-item"><a class="nav-link" href="../news/index.html"><i class="fa-solid fa-newspaper me-1"></i>Noticias</a></li>
       </ul>
       
-        <a class="btn btn-outline-secondary ms-2" href="../user_login/index.html"><i class="fa-solid fa-right-to-bracket me-1"></i>Iniciar sesión</a>
+        <a class="btn btn-outline-secondary ms-2" href="index.html"><i class="fa-solid fa-right-to-bracket me-1"></i>Iniciar sesión</a>
         <a class="btn btn-outline-secondary ms-2" href="../register/index.html"><i class="fa-solid fa-user-plus me-1"></i>Registrarse</a>
       
       
@@ -38,35 +39,33 @@
 </nav>
 <div class="container flex-grow-1">
   
-<h1 class="mb-4">Cursos</h1>
-<div class="row">
-
-  <div class="col-md-4 course-card" data-aos="fade-up">
-    <div class="card h-100">
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-4 mx-auto">
+      <h1>Iniciar Sesión</h1>
       
-      <img src="../static/uploads/Screenshot_2025-08-12_at_12.35.19_p.m..png" class="card-img-top" alt="Imagen del curso">
       
-      <div class="card-body d-flex flex-column">
-        <h5 class="card-title">Operaciones para profesionales en recursos humanos</h5>
-        <p class="card-text"><i class="fa-solid fa-signal me-1"></i>Principiante</p>
-        <a class="btn btn-primary mt-auto" href="1/index.html">Ver Curso</a>
+        
+      
+      
+      <form method="post" class="show-spinner">
+        <div class="mb-3">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" class="form-control" name="email" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-control" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Entrar</button>
+      </form>
+      
+      <div class="text-center mt-3">
+        <p><a href="../forgot_password/index.html">¿Olvidaste tu contraseña?</a></p>
+        <p>¿No tienes cuenta? <a href="../register/index.html">Registrarse</a></p>
       </div>
     </div>
   </div>
-
-  <div class="col-md-4 course-card" data-aos="fade-up">
-    <div class="card h-100">
-      
-      <img src="../static/uploads/Screenshot_2025-08-12_at_12.35.19_p.m..png" class="card-img-top" alt="Imagen del curso">
-      
-      <div class="card-body d-flex flex-column">
-        <h5 class="card-title">Operaciones para profesionales en recursos humanos</h5>
-        <p class="card-text"><i class="fa-solid fa-signal me-1"></i>Principiante</p>
-        <a class="btn btn-primary mt-auto" href="2/index.html">Ver Curso</a>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 </div>

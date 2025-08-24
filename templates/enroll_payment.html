@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow">
+        <div class="card-body text-center">
+          <h2 class="mb-4">Pago del Curso</h2>
+          <p class="lead">El curso <strong>{{ course.title }}</strong> requiere pago para acceder.</p>
+          <p class="mb-4">Precio: <span class="fw-bold">{{ format_price(course.price_cents or 0) }}</span></p>
+          <form id="paypal-form" method="POST" action="{{ url_for('paypal_create', course_id=course.id) }}">
+            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+              <i class="fab fa-paypal me-2"></i>Pagar con PayPal
+            </button>
+          </form>
+          <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-link">Cancelar y volver al curso</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// PayPal AJAX integration
+document.getElementById('paypal-form').onsubmit = async function(e) {
+  e.preventDefault();
+  
+  try {
+    const resp = await fetch(this.action, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!resp.ok) {
+      const error = await resp.json();
+      alert('Error: ' + (error.error || 'Payment failed'));
+      return;
+    }
+    
+    const data = await resp.json();
+    
+    if (data && data.links) {
+      const approve = data.links.find(l => l.rel === 'approve');
+      if (approve) {
+        window.location.href = approve.href;
+      } else {
+        alert('Error: No approval link found');
+      }
+    } else {
+      alert('Error: Invalid response from payment service');
+    }
+  } catch (error) {
+    console.error('Payment error:', error);
+    alert('Error processing payment. Please try again.');
+  }
+};
+</script>
+{% endblock %}

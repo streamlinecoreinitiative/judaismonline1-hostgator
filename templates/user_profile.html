@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-8 mx-auto">
+      <h1>Mi Perfil</h1>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="row">
+        <!-- Información del perfil -->
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-user"></i> Información Personal</h5>
+            </div>
+            <div class="card-body">
+              <p><strong>Correo:</strong> {{ user.email }}</p>
+              <p><strong>Empresa:</strong> {{ user.company.name if user.company else "Sin empresa" }}</p>
+              <p><strong>Tipo de usuario:</strong> 
+                {% if user.is_company_admin %}
+                  <span class="badge bg-primary">Administrador de Empresa</span>
+                {% else %}
+                  <span class="badge bg-secondary">Usuario</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <!-- Cambiar contraseña -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-lock"></i> Cambiar Contraseña</h5>
+            </div>
+            <div class="card-body">
+              <form method="POST">
+                <input type="hidden" name="action" value="change_password">
+                <div class="mb-3">
+                  <label class="form-label">Contraseña Actual</label>
+                  <input type="password" class="form-control" name="current_password" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Nueva Contraseña</label>
+                  <input type="password" class="form-control" name="new_password" required minlength="6">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Confirmar Nueva Contraseña</label>
+                  <input type="password" class="form-control" name="confirm_password" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary">Cambiar Contraseña</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Cambiar email -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-envelope"></i> Cambiar Correo Electrónico</h5>
+            </div>
+            <div class="card-body">
+              <form method="POST">
+                <input type="hidden" name="action" value="change_email">
+                <div class="mb-3">
+                  <label class="form-label">Nuevo Correo Electrónico</label>
+                  <input type="email" class="form-control" name="new_email" value="{{ user.email }}" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Confirmar con Contraseña</label>
+                  <input type="password" class="form-control" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Cambiar Correo</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cursos asignados -->
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="fas fa-graduation-cap"></i> Cursos Asignados por mi Empresa</h5>
+            </div>
+            <div class="card-body">
+              {% if assigned_courses %}
+                <div class="list-group">
+                  {% for enrollment in assigned_courses %}
+                    <div class="list-group-item">
+                      <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div>
+                          <h6 class="mb-1">{{ enrollment.course.title }}</h6>
+                          <small class="text-muted">{{ enrollment.course.difficulty }}</small>
+                          {% if enrollment.is_mandatory %}
+                            <span class="badge bg-danger ms-2">Obligatorio</span>
+                          {% else %}
+                            <span class="badge bg-info ms-2">Opcional</span>
+                          {% endif %}
+                        </div>
+                        <div>
+                          <a href="{{ url_for('course_detail', course_id=enrollment.course.id) }}" class="btn btn-sm btn-outline-primary">
+                            Ver Curso
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-center">
+                  <p class="text-muted">No tienes cursos asignados por tu empresa.</p>
+                  {% if not user.company %}
+                    <small>Para tener cursos asignados, debes pertenecer a una empresa.</small>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,19 +1,52 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>Registro</h1>
-<form method="post" class="show-spinner">
-  <div class="mb-3">
-    <label class="form-label">Correo electrónico</label>
-    <input type="email" class="form-control" name="email" required>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-4 mx-auto">
+      <h1>Registro</h1>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      
+      <form method="post" class="show-spinner">
+        <div class="mb-3">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" class="form-control" name="email" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-control" name="password" required minlength="6">
+          <div class="form-text">Mínimo 6 caracteres.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Confirmar Contraseña</label>
+          <input type="password" class="form-control" name="confirm_password" required minlength="6">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Empresa (opcional)</label>
+          <input type="text" class="form-control" name="company">
+        </div>
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" id="accept_terms" name="accept_terms" required>
+          <label class="form-check-label" for="accept_terms">
+            Acepto los <a href="{{ url_for('terms') }}" target="_blank">términos y condiciones</a>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Registrarse</button>
+      </form>
+      
+      <div class="text-center mt-3">
+        <p>¿Ya tienes cuenta? <a href="{{ url_for('user_login') }}">Iniciar sesión</a></p>
+      </div>
+    </div>
   </div>
-  <div class="mb-3">
-    <label class="form-label">Contraseña</label>
-    <input type="password" class="form-control" name="password" required>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Empresa (opcional)</label>
-    <input type="text" class="form-control" name="company">
-  </div>
-  <button type="submit" class="btn btn-primary">Registrarse</button>
-</form>
+</div>
 {% endblock %}

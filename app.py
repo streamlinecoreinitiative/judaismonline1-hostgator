@@ -1,11 +1,32 @@
+import os
+import uuid
+
+
+# PayPal config (debe ir después de app y modelos)
+
+PAYPAL_CLIENT_ID = os.environ.get("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = os.environ.get("PAYPAL_MODE", "sandbox")  # sandbox o live
+
+
+# Las rutas PayPal deben ir después de la definición de 'app'
+
 import datetime
 from dotenv import load_dotenv
 load_dotenv()
 import os
 import sys
+import json
+import random
+import re
+import requests
+import stripe
+import ollama
 from io import BytesIO
 import smtplib
 from email.message import EmailMessage
+import secrets
+import subprocess
 
 from flask import (
     Flask,
@@ -31,19 +52,46 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import inspect, text
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import subprocess
+
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URL",
-    "mysql+pymysql://monroyas_beregrond:Caco101268123456!!@monroyasesores.com.mx/monroyas_education",
-)
+# Use DATABASE_URL if set, otherwise use local SQLite for development
+db_url = os.environ.get("DATABASE_URL")
+if not db_url:
+    db_url = "sqlite:///instance/site.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
 app.config["GENERATING_STATIC"] = False
 app.config["SHOW_LOGIN"] = os.environ.get("SHOW_LOGIN") == "1"
+# Prevent MySQL connection loss with more aggressive settings
+app.config["SQLALCHEMY_POOL_RECYCLE"] = 120  # 2 minutes - very aggressive recycling
+app.config["SQLALCHEMY_POOL_PRE_PING"] = True
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 120,  # 2 minutes
+    "pool_pre_ping": True,
+    "pool_timeout": 10,  # Reduced from 20 to 10 seconds
+    "max_overflow": 0,  # Don't create extra connections beyond pool size
+    "pool_size": 5,  # Smaller pool size
+}
 app.secret_key = os.environ.get("SECRET_KEY", "secret")
 db = SQLAlchemy(app)
+
+# Database retry helper for connection issues
+def retry_db_operation(operation, max_retries=3, delay=1):
+    """
+    Retry database operations with exponential backoff
+    """
+    import time
+    for attempt in range(max_retries):
+        try:
+            return operation()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            app.logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries}): {e}")
+            time.sleep(delay * (2 ** attempt))  # Exponential backoff
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # Encryption key used to protect personal information
@@ -94,6 +142,8 @@ class User(db.Model):
     is_company_admin = db.Column(db.Boolean, default=False)
     company_id = db.Column(db.Integer, db.ForeignKey("company.id"))
     company = db.relationship("Company", backref="users")
+    reset_token = db.Column(db.String(200))
+    reset_token_expires = db.Column(db.DateTime)
 
 
 class Course(db.Model):
@@ -147,8 +197,12 @@ class Enrollment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey("course.id"), nullable=False)
     paid = db.Column(db.Boolean, default=False)
-    user = db.relationship("User", backref="enrollments")
+    is_mandatory = db.Column(db.Boolean, default=False)  # True = obligatorio, False = opcional
+    assigned_by = db.Column(db.Integer, db.ForeignKey("user.id"))  # Admin que asignó el curso
+    assigned_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    user = db.relationship("User", backref="enrollments", foreign_keys=[user_id])
     course = db.relationship("Course", backref="enrollments")
+    assigner = db.relationship("User", foreign_keys=[assigned_by])
     __table_args__ = (db.UniqueConstraint("user_id", "course_id", name="uix_user_course"),)
 
 
@@ -207,25 +261,77 @@ class SiteSetting(db.Model):
 
 
 def get_setting(key: str, default: str | None = None) -> str | None:
-    setting = SiteSetting.query.filter_by(key=key).first()
-    return setting.value if setting else default
+    def _get_setting():
+        setting = SiteSetting.query.filter_by(key=key).first()
+        return setting.value if setting else default
+    
+    try:
+        return retry_db_operation(_get_setting)
+    except Exception as e:
+        # Log the error and return default value if database is unavailable
+        print(f"[WARN] get_setting error for key '{key}': {e}")
+        return default
 
 
 def set_setting(key: str, value: str) -> None:
-    setting = SiteSetting.query.filter_by(key=key).first()
-    if setting:
-        setting.value = value
+    try:
+        setting = SiteSetting.query.filter_by(key=key).first()
+        if setting:
+            setting.value = value
+        else:
+            setting = SiteSetting(key=key, value=value)
+            db.session.add(setting)
+        db.session.commit()
+    except Exception as e:
+        print(f"[WARN] set_setting error for key '{key}': {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+
+
+def format_price(price_cents: int, currency: str = None) -> str:
+    """Format price with currency symbol."""
+    if not currency:
+        currency = get_setting("currency", "USD")
+    
+    price = price_cents / 100
+    currency_symbols = {
+        "USD": "$",
+        "EUR": "€", 
+        "MXN": "$",
+        "GBP": "£",
+    }
+    
+    symbol = currency_symbols.get(currency, currency + " ")
+    if currency in ["EUR"]:
+        return f"{price:.2f}{symbol}"
     else:
-        setting = SiteSetting(key=key, value=value)
-        db.session.add(setting)
-    db.session.commit()
+        return f"{symbol}{price:.2f}"
 
 
 @app.context_processor
 def inject_user():
-    user_id = session.get("user_id")
-    user = User.query.get(user_id) if user_id else None
-    return {"current_user": user}
+    def _get_user_context():
+        user_id = session.get("user_id")
+        user = User.query.get(user_id) if user_id else None
+        currency = get_setting("currency", "USD")
+        return {
+            "current_user": user,
+            "format_price": format_price,
+            "currency": currency
+        }
+    
+    try:
+        return retry_db_operation(_get_user_context)
+    except Exception as e:
+        # If database is unavailable, return minimal context with defaults
+        print(f"[WARN] inject_user error: {e}")
+        return {
+            "current_user": None,
+            "format_price": format_price,
+            "currency": "USD"
+        }
 
 
 def user_has_course_access(course: Course, user_id: int | None) -> bool:
@@ -241,17 +347,35 @@ def user_has_course_access(course: Course, user_id: int | None) -> bool:
             Enrollment.query.filter_by(user_id=user_id, course_id=course.id).first()
             is not None
         )
-    # Paid open courses require an enrollment record
-    if course.price_cents > 0:
-        if not user_id:
+    # For open courses, users can always view content (payment only required for certificate)
+    return True
+
+
+def user_can_get_certificate(course: Course, user_id: int | None) -> bool:
+    """Check if a user can get a certificate for a course."""
+    if not user_id:
+        return False
+    
+    # Company courses require assignment
+    if course.company_id is not None:
+        user = User.query.get(user_id)
+        if not user or user.company_id != course.company_id:
             return False
+        return (
+            Enrollment.query.filter_by(user_id=user_id, course_id=course.id).first()
+            is not None
+        )
+    
+    # Paid courses require payment for certificate
+    if course.price_cents and course.price_cents > 0:
         return (
             Enrollment.query.filter_by(
                 user_id=user_id, course_id=course.id, paid=True
             ).first()
             is not None
         )
-    # Free open courses are available to everyone
+    
+    # Free courses don't require payment
     return True
 
 
@@ -263,7 +387,8 @@ def require_course_access(course: Course):
 
 
 def require_login():
-    if request.remote_addr not in ("127.0.0.1", "::1"):
+    # Only restrict IP in development mode
+    if app.debug and request.remote_addr not in ("127.0.0.1", "::1"):
         abort(403)
     if not session.get("logged_in"):
         return redirect(url_for("login"))
@@ -410,9 +535,15 @@ def clean_module_content(html: str, title: str) -> str:
     # Strip any leading mentions of HTML or "HTML Lesson" phrases
     html = re.sub(r"(?i)^\s*HTML(?:\s*Lesson)?\s*[:\-]?\s*", "", html)
 
-    # Ensure the module starts with a heading matching the title
-    if title and not re.search(r"<h\d", html):
-        html = f"<h2>{title}</h2>\n" + html
+    # Remove duplicate titles at the beginning
+    if title:
+        # Remove any existing h1-h6 tags with the same title at the beginning
+        pattern = rf"^\s*<h[1-6][^>]*>\s*{re.escape(title)}\s*</h[1-6]>\s*"
+        html = re.sub(pattern, "", html, flags=re.IGNORECASE)
+        
+        # Only add title if no heading exists at all
+        if not re.search(r"<h[1-6]", html):
+            html = f"<h2>{title}</h2>\n" + html
 
     return html.strip()
 
@@ -420,8 +551,8 @@ def clean_module_content(html: str, title: str) -> str:
 def generate_section_titles(topic: str, count: int = 3):
     """Return a list of module titles for the course."""
     prompt = (
-        f"Provide {count} concise module titles for a course about {topic}. "
-        "Respond in JSON as a simple list of strings."
+        f"Proporciona {count} títulos concisos de módulos para un curso sobre {topic}. "
+        "Responde en JSON como una lista simple de cadenas. La respuesta debe estar en español."
     )
     data = parse_json_response(generate_text(prompt)) or []
     titles = [str(t) for t in data][:count]
@@ -433,13 +564,13 @@ def generate_section_titles(topic: str, count: int = 3):
 def generate_module_content(course_topic: str, module_title: str) -> str:
     """Generate detailed HTML content for a single module."""
     prompt = (
-        f"Write a lesson for a course about {course_topic}. "
-        f"The module title is '{module_title}'. "
-        "Format the response in HTML using a consistent structure: "
-        "<h2>{module_title}</h2> as the heading, followed by a section titled 'Introduction', "
-        "a section titled 'Main Content' covering the topic, and a final section titled 'Conclusion' summarizing the key points. "
-        "Do not reference any other modules and respond only with the HTML markup."
-    ).format(module_title=module_title)
+        f"Escribe una lección para un curso sobre {course_topic}. "
+        f"El título del módulo es '{module_title}'. "
+        "La respuesta debe estar en HTML usando una estructura consistente: "
+        f"<h2>{module_title}</h2> como encabezado, seguido de una sección titulada 'Introducción', "
+        "una sección titulada 'Contenido principal' que cubra el tema, y una sección final titulada 'Conclusión' que resuma los puntos clave. "
+        "No hagas referencia a otros módulos y responde solo con el marcado HTML. La respuesta debe estar en español."
+    )
     content = generate_text(prompt).strip()
     return clean_module_content(content, module_title)
 
@@ -447,12 +578,12 @@ def generate_module_content(course_topic: str, module_title: str) -> str:
 def generate_course_overview(topic: str) -> str:
     """Return an HTML overview for the course."""
     prompt = (
-        f"Write a concise overview for a course about {topic}. "
-        "Format the response in HTML with three sections: "
-        "<h2>Introduction</h2> describing the course, "
-        "<h2>Main Content</h2> outlining what will be covered, and "
-        "<h2>Learning Expectations</h2> summarising the outcomes. "
-        "Do not mention how many modules the course has."
+        f"Escribe una descripción concisa para un curso sobre {topic}. "
+        "La respuesta debe estar en HTML con tres secciones: "
+        "<h2>Introducción</h2> describiendo el curso, "
+        "<h2>Contenido principal</h2> indicando lo que se cubrirá, y "
+        "<h2>Expectativas de aprendizaje</h2> resumiendo los resultados. "
+        "No menciones cuántos módulos tiene el curso. La respuesta debe estar en español."
     )
     return generate_text(prompt).strip()
 
@@ -470,10 +601,10 @@ def generate_course_sections(topic: str, count: int = 3):
 def generate_quiz_questions(topic: str, count: int = 10):
     """Return a list of quiz question dicts."""
     prompt = (
-        f"Create {count} multiple choice quiz questions summarizing key points about {topic}. "
-        "Provide options A, B, C and D and the correct answer letter. "
-        "Respond only with valid JSON. The JSON must be a list of objects each containing "
-        "'question', 'a', 'b', 'c', 'd' and 'answer'. Do not include any explanation or formatting outside the JSON."
+        f"Crea {count} preguntas tipo test de opción múltiple que resuman los puntos clave sobre {topic}. "
+        "Proporciona las opciones A, B, C y D y la letra de la respuesta correcta. "
+        "Responde solo con JSON válido. El JSON debe ser una lista de objetos, cada uno con "
+        "'question', 'a', 'b', 'c', 'd' y 'answer'. No incluyas ninguna explicación ni formato fuera del JSON. La respuesta debe estar en español."
     )
     data = None
     for _ in range(3):
@@ -607,71 +738,99 @@ def fetch_news_items() -> None:
 
 def create_tables():
     """Create database tables if they don't exist."""
-    db.create_all()
-    # Ensure uploads folder exists
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    # Add icon column to Course if missing
-    inspector = inspect(db.engine)
-    cols = [c["name"] for c in inspector.get_columns("course")]
-    if "icon" not in cols:
-        with db.engine.begin() as conn:
-            conn.execute(text("ALTER TABLE course ADD COLUMN icon VARCHAR(200)"))
-    if "company_id" not in cols:
-        with db.engine.begin() as conn:
-            conn.execute(
-                text("ALTER TABLE course ADD COLUMN company_id INTEGER REFERENCES company(id)")
-            )
-    if "price_cents" not in cols:
-        with db.engine.begin() as conn:
-            conn.execute(text("ALTER TABLE course ADD COLUMN price_cents INTEGER DEFAULT 0"))
-    user_cols = [c["name"] for c in inspector.get_columns("user")]
-    if "is_company_admin" not in user_cols:
-        with db.engine.begin() as conn:
-            conn.execute(
-                text("ALTER TABLE user ADD COLUMN is_company_admin BOOLEAN DEFAULT 0")
-            )
-    # Initialize or update basic pages with richer default text
-    default_pages = {
-        "landing": (
-            "Inicio",
-            "¡Bienvenido a Monroy Asesores!\n\nSomos una firma mexicana especializada en consultoría de Recursos Humanos, coaching ejecutivo y diseño organizacional. Explora nuestros cursos y artículos para potenciar el talento de tu empresa."
-        ),
-        "about": (
-            "Nosotros",
-            "Monroy Asesores ayuda a las organizaciones a desarrollar estrategias efectivas de capital humano. Ofrecemos coaching ejecutivo, desarrollo de estructuras organizacionales y formación especializada en español."
-        ),
-        "contact": (
-            "Contacto",
-            "Nos encantaría escucharte. Escríbenos a [info@monroyasesores.com.mx](mailto:info@monroyasesores.com.mx) o utiliza el formulario a continuación."
-        ),
-        "faq": (
-            "Preguntas Frecuentes",
-            "### ¿Qué ofrece Monroy Asesores?\nProveemos consultoría y cursos de Recursos Humanos orientados a empresas mexicanas.\n\n### ¿Los cursos tienen costo?\nAlgunos cursos son gratuitos y otros requieren pago o asignación por parte de tu empresa."
-        ),
-        "terms": (
-            "Términos y Aviso Legal",
-            "## Términos\nTu información se utiliza únicamente para administrar el sitio y tus cursos.\n\n### Aviso Legal\nParte del contenido se genera con modelos de IA y puede contener errores."
-        ),
-    }
-    for slug, (title, content) in default_pages.items():
-        page = Page.query.filter_by(slug=slug).first()
-        if page is None:
-            db.session.add(Page(slug=slug, title=title, content=content))
-    db.session.commit()
-    if not get_setting("admin_email") and os.environ.get("ADMIN_EMAIL"):
-        set_setting("admin_email", os.environ.get("ADMIN_EMAIL"))
-    if not get_setting("site_topic"):
-        set_setting("site_topic", "recursos humanos")
-    if not get_setting("news_api_url"):
-        set_setting("news_api_url", get_news_api_url())
-    if not get_setting("hostgator_host") and os.environ.get("HOSTGATOR_HOST"):
-        set_setting("hostgator_host", os.environ.get("HOSTGATOR_HOST"))
-    if not get_setting("hostgator_username") and os.environ.get("HOSTGATOR_USERNAME"):
-        set_setting("hostgator_username", os.environ.get("HOSTGATOR_USERNAME"))
-    if not get_setting("hostgator_password") and os.environ.get("HOSTGATOR_PASSWORD"):
-        set_setting("hostgator_password", os.environ.get("HOSTGATOR_PASSWORD"))
-    if not get_setting("hostgator_path") and os.environ.get("HOSTGATOR_REMOTE_PATH"):
-        set_setting("hostgator_path", os.environ.get("HOSTGATOR_REMOTE_PATH"))
+    try:
+        db.create_all()
+        # Ensure uploads folder exists
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+        # Add icon column to Course if missing
+        inspector = inspect(db.engine)
+        cols = [c["name"] for c in inspector.get_columns("course")]
+        if "icon" not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE course ADD COLUMN icon VARCHAR(200)"))
+        if "company_id" not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE course ADD COLUMN company_id INTEGER REFERENCES company(id)")
+                )
+        if "price_cents" not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE course ADD COLUMN price_cents INTEGER DEFAULT 0"))
+        user_cols = [c["name"] for c in inspector.get_columns("user")]
+        if "is_company_admin" not in user_cols:
+            with db.engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE user ADD COLUMN is_company_admin BOOLEAN DEFAULT 0")
+                )
+        if "reset_token" not in user_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE user ADD COLUMN reset_token VARCHAR(200)"))
+        if "reset_token_expires" not in user_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE user ADD COLUMN reset_token_expires DATETIME"))
+        
+        # Add new columns to Enrollment table
+        enrollment_cols = [c["name"] for c in inspector.get_columns("enrollment")]
+        if "is_mandatory" not in enrollment_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE enrollment ADD COLUMN is_mandatory BOOLEAN DEFAULT 0"))
+        if "assigned_by" not in enrollment_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE enrollment ADD COLUMN assigned_by INTEGER REFERENCES user(id)"))
+        if "assigned_at" not in enrollment_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE enrollment ADD COLUMN assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP"))
+        
+        # Initialize or update basic pages with richer default text
+        default_pages = {
+            "landing": (
+                "Inicio",
+                "¡Bienvenido a Monroy Asesores!\n\nSomos una firma mexicana especializada en consultoría de Recursos Humanos, coaching ejecutivo y diseño organizacional. Explora nuestros cursos y artículos para potenciar el talento de tu empresa."
+            ),
+            "about": (
+                "Nosotros",
+                "Monroy Asesores ayuda a las organizaciones a desarrollar estrategias efectivas de capital humano. Ofrecemos coaching ejecutivo, desarrollo de estructuras organizacionales y formación especializada en español."
+            ),
+            "contact": (
+                "Contacto",
+                "Nos encantaría escucharte. Escríbenos a [info@monroyasesores.com.mx](mailto:info@monroyasesores.com.mx) o utiliza el formulario a continuación."
+            ),
+            "faq": (
+                "Preguntas Frecuentes",
+                "### ¿Qué ofrece Monroy Asesores?\nProveemos consultoría y cursos de Recursos Humanos orientados a empresas mexicanas.\n\n### ¿Los cursos tienen costo?\nAlgunos cursos son gratuitos y otros requieren pago o asignación por parte de tu empresa."
+            ),
+            "terms": (
+                "Términos y Aviso Legal",
+                "## Términos\nTu información se utiliza únicamente para administrar el sitio y tus cursos.\n\n### Aviso Legal\nParte del contenido se genera con modelos de IA y puede contener errores."
+            ),
+        }
+        for slug, (title, content) in default_pages.items():
+            page = Page.query.filter_by(slug=slug).first()
+            if page is None:
+                db.session.add(Page(slug=slug, title=title, content=content))
+        db.session.commit()
+        if not get_setting("admin_email") and os.environ.get("ADMIN_EMAIL"):
+            set_setting("admin_email", os.environ.get("ADMIN_EMAIL"))
+        if not get_setting("site_topic"):
+            set_setting("site_topic", "recursos humanos")
+        if not get_setting("currency"):
+            set_setting("currency", "USD")
+        if not get_setting("news_api_url"):
+            set_setting("news_api_url", get_news_api_url())
+        if not get_setting("hostgator_host") and os.environ.get("HOSTGATOR_HOST"):
+            set_setting("hostgator_host", os.environ.get("HOSTGATOR_HOST"))
+        if not get_setting("hostgator_username") and os.environ.get("HOSTGATOR_USERNAME"):
+            set_setting("hostgator_username", os.environ.get("HOSTGATOR_USERNAME"))
+        if not get_setting("hostgator_password") and os.environ.get("HOSTGATOR_PASSWORD"):
+            set_setting("hostgator_password", os.environ.get("HOSTGATOR_PASSWORD"))
+        if not get_setting("hostgator_path") and os.environ.get("HOSTGATOR_REMOTE_PATH"):
+            set_setting("hostgator_path", os.environ.get("HOSTGATOR_REMOTE_PATH"))
+    except Exception as e:
+        print(f"[ERROR] create_tables failed: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
 
 
 @app.route("/")
@@ -689,17 +848,79 @@ def blog():
 @app.route("/courses/")
 def courses():
     user_id = session.get("user_id")
-    if user_id:
-        user = User.query.get(user_id)
-        if user and user.company_id:
-            courses = Course.query.filter(
-                (Course.company_id == None) | (Course.company_id == user.company_id)
-            ).all()
-        else:
-            courses = Course.query.filter(Course.company_id == None).all()
+    if not user_id:
+        return redirect(url_for("user_login"))
+    user = User.query.get(user_id)
+    if user and user.company_id:
+        courses = Course.query.filter(
+            (Course.company_id == None) | (Course.company_id == user.company_id)
+        ).all()
     else:
         courses = Course.query.filter(Course.company_id == None).all()
-    return render_template("courses.html", courses=courses)
+    
+    # Get completion status for each course
+    course_progress = {}
+    for course in courses:
+        sections = CourseSection.query.filter_by(course_id=course.id).all()
+        completed = [
+            p.section_id
+            for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
+            .join(CourseSection)
+            .filter(CourseSection.course_id == course.id)
+            .all()
+        ]
+        quiz_passed = session.get("quiz_passed", {}).get(str(course.id))
+        all_done = bool(sections) and all(s.id in completed for s in sections)
+        is_assigned = False
+        if course.company_id:
+            is_assigned = Enrollment.query.filter_by(user_id=user_id, course_id=course.id).first() is not None
+        
+        course_progress[course.id] = {
+            'completed': all_done and quiz_passed,
+            'in_progress': len(completed) > 0 and not (all_done and quiz_passed),
+            'is_assigned': is_assigned
+        }
+    
+    return render_template("courses.html", courses=courses, course_progress=course_progress)
+
+
+@app.route("/my_courses/")
+def my_courses():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("user_login"))
+    
+    # Get completed courses
+    completed_courses = []
+    user = User.query.get(user_id)
+    
+    # Get all courses user has access to
+    if user and user.company_id:
+        all_courses = Course.query.filter(
+            (Course.company_id == None) | (Course.company_id == user.company_id)
+        ).all()
+    else:
+        all_courses = Course.query.filter(Course.company_id == None).all()
+    
+    for course in all_courses:
+        sections = CourseSection.query.filter_by(course_id=course.id).all()
+        completed = [
+            p.section_id
+            for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
+            .join(CourseSection)
+            .filter(CourseSection.course_id == course.id)
+            .all()
+        ]
+        quiz_passed = session.get("quiz_passed", {}).get(str(course.id))
+        all_done = bool(sections) and all(s.id in completed for s in sections)
+        
+        if all_done and quiz_passed:
+            completed_courses.append({
+                'course': course,
+                'can_get_certificate': user_can_get_certificate(course, user_id)
+            })
+    
+    return render_template("my_courses.html", completed_courses=completed_courses)
 
 
 @app.route("/about/")
@@ -743,7 +964,8 @@ def news():
 
 @app.route("/login/", methods=["GET", "POST"])
 def login():
-    if request.remote_addr not in ("127.0.0.1", "::1"):
+    # Only restrict IP in development mode
+    if app.debug and request.remote_addr not in ("127.0.0.1", "::1"):
         abort(403)
     if request.method == "POST":
         password = request.form.get("password")
@@ -764,7 +986,22 @@ def register():
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
         company_name = request.form.get("company")
+        accept_terms = request.form.get("accept_terms")
+        
+        if not accept_terms:
+            flash("Debes aceptar los términos y condiciones", "danger")
+            return render_template("register.html")
+        
+        if password != confirm_password:
+            flash("Las contraseñas no coinciden", "danger")
+            return render_template("register.html")
+        
+        if len(password) < 6:
+            flash("La contraseña debe tener al menos 6 caracteres", "danger")
+            return render_template("register.html")
+        
         if not User.query.filter_by(email=email).first():
             company = None
             if company_name:
@@ -781,6 +1018,7 @@ def register():
             db.session.add(user)
             db.session.commit()
             session["user_id"] = user.id
+            flash("Cuenta creada exitosamente", "success")
             return redirect(url_for("index"))
         flash("Correo ya registrado", "danger")
     return render_template("register.html")
@@ -805,6 +1043,109 @@ def user_logout():
     return redirect(url_for("index"))
 
 
+@app.route("/forgot_password/", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        user = User.query.filter_by(email=email).first()
+        if user:
+            token = secrets.token_urlsafe(32)
+            user.reset_token = token
+            user.reset_token_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+            db.session.commit()
+            
+            reset_url = url_for("reset_password", token=token, _external=True)
+            send_email(
+                email,
+                "Restablecer contraseña",
+                f"Para restablecer tu contraseña, haz clic en el siguiente enlace: {reset_url}\n\nEste enlace expirará en 1 hora."
+            )
+            flash("Se ha enviado un enlace de restablecimiento a tu correo", "info")
+        else:
+            flash("No se encontró una cuenta con ese correo", "danger")
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset_password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    user = User.query.filter_by(reset_token=token).first()
+    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.datetime.utcnow():
+        flash("El enlace de restablecimiento es inválido o ha expirado", "danger")
+        return redirect(url_for("forgot_password"))
+    
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+        
+        if password != confirm_password:
+            flash("Las contraseñas no coinciden", "danger")
+            return render_template("reset_password.html", token=token)
+        
+        if len(password) < 6:
+            flash("La contraseña debe tener al menos 6 caracteres", "danger")
+            return render_template("reset_password.html", token=token)
+        
+        user.password_hash = generate_password_hash(password)
+        user.reset_token = None
+        user.reset_token_expires = None
+        db.session.commit()
+        
+        flash("Contraseña restablecida exitosamente", "success")
+        return redirect(url_for("user_login"))
+    
+    return render_template("reset_password.html", token=token)
+
+
+@app.route("/profile/", methods=["GET", "POST"])
+def user_profile():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("user_login"))
+    
+    user = User.query.get_or_404(user_id)
+    
+    if request.method == "POST":
+        action = request.form.get("action")
+        
+        if action == "change_password":
+            current_password = request.form.get("current_password")
+            new_password = request.form.get("new_password")
+            confirm_password = request.form.get("confirm_password")
+            
+            if not check_password_hash(user.password_hash, current_password):
+                flash("Contraseña actual incorrecta", "danger")
+            elif new_password != confirm_password:
+                flash("Las nuevas contraseñas no coinciden", "danger")
+            elif len(new_password) < 6:
+                flash("La nueva contraseña debe tener al menos 6 caracteres", "danger")
+            else:
+                user.password_hash = generate_password_hash(new_password)
+                db.session.commit()
+                flash("Contraseña cambiada exitosamente", "success")
+        
+        elif action == "change_email":
+            new_email = request.form.get("new_email")
+            password = request.form.get("password")
+            
+            if not check_password_hash(user.password_hash, password):
+                flash("Contraseña incorrecta", "danger")
+            elif User.query.filter_by(email=new_email).filter(User.id != user.id).first():
+                flash("Este correo ya está en uso", "danger")
+            else:
+                user.email = new_email
+                db.session.commit()
+                flash("Correo electrónico cambiado exitosamente", "success")
+    
+    # Get user's assigned courses
+    assigned_courses = []
+    if user.company_id:
+        assigned_courses = Enrollment.query.filter_by(user_id=user.id).join(Course).filter(
+            Course.company_id == user.company_id
+        ).all()
+    
+    return render_template("user_profile.html", user=user, assigned_courses=assigned_courses)
+
+
 @app.route("/company_admin/", methods=["GET", "POST"])
 def company_admin():
     user_id = session.get("user_id")
@@ -825,16 +1166,32 @@ def company_admin():
         ):
             abort(403)
         if action == "assign":
-            if not Enrollment.query.filter_by(
+            is_mandatory = request.form.get("is_mandatory") == "1"
+            existing_enrollment = Enrollment.query.filter_by(
                 user_id=target_user_id, course_id=course_id
-            ).first():
+            ).first()
+            
+            if not existing_enrollment:
                 db.session.add(
                     Enrollment(
-                        user_id=target_user_id, course_id=course_id, paid=True
+                        user_id=target_user_id, 
+                        course_id=course_id, 
+                        paid=True,
+                        is_mandatory=is_mandatory,
+                        assigned_by=user.id
                     )
                 )
                 db.session.commit()
-                flash("Curso asignado", "success")
+                type_text = "obligatorio" if is_mandatory else "opcional"
+                flash(f"Curso {type_text} asignado exitosamente", "success")
+            else:
+                # Update existing enrollment
+                existing_enrollment.is_mandatory = is_mandatory
+                existing_enrollment.assigned_by = user.id
+                existing_enrollment.assigned_at = datetime.datetime.utcnow()
+                db.session.commit()
+                type_text = "obligatorio" if is_mandatory else "opcional"
+                flash(f"Curso actualizado como {type_text}", "success")
         elif action == "unassign":
             Enrollment.query.filter_by(
                 user_id=target_user_id, course_id=course_id
@@ -856,8 +1213,10 @@ def company_admin():
 
 @app.route("/courses/<int:course_id>/")
 def course_detail(course_id):
-    course = Course.query.get_or_404(course_id)
     user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("user_login"))
+    course = Course.query.get_or_404(course_id)
     if not user_has_course_access(course, user_id):
         return render_template("course_paywall.html", course=course)
     sections = (
@@ -865,18 +1224,16 @@ def course_detail(course_id):
         .order_by(CourseSection.order)
         .all()
     )
-    if user_id:
-        completed = [
-            p.section_id
-            for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
-            .join(CourseSection)
-            .filter(CourseSection.course_id == course_id)
-            .all()
-        ]
-    else:
-        completed = session.get("completed_sections", {}).get(str(course_id), [])
+    completed = [
+        p.section_id
+        for p in SectionProgress.query.filter_by(user_id=user_id, completed=True)
+        .join(CourseSection)
+        .filter(CourseSection.course_id == course_id)
+        .all()
+    ]
     all_done = bool(sections) and all(s.id in completed for s in sections)
     quiz_passed = session.get("quiz_passed", {}).get(str(course_id))
+    can_get_certificate = user_can_get_certificate(course, user_id)
     return render_template(
         "course_detail.html",
         course=course,
@@ -884,7 +1241,8 @@ def course_detail(course_id):
         completed=completed,
         all_done=all_done,
         quiz_passed=quiz_passed,
-        can_download=all_done and quiz_passed,
+        can_download=all_done and quiz_passed and can_get_certificate,
+        can_get_certificate=can_get_certificate,
     )
 
 
@@ -896,32 +1254,151 @@ def enroll(course_id):
     course = Course.query.get_or_404(course_id)
     if course.company_id is not None:
         abort(403)
-    if course.price_cents <= 0:
+    if not course.price_cents or course.price_cents <= 0:
         enrollment = Enrollment.query.filter_by(user_id=user_id, course_id=course.id).first()
         if not enrollment:
             enrollment = Enrollment(user_id=user_id, course_id=course.id, paid=True)
             db.session.add(enrollment)
             db.session.commit()
         return redirect(url_for("course_detail", course_id=course.id))
-    checkout = stripe.checkout.Session.create(
-        payment_method_types=["card"],
-        line_items=[
-            {
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {"name": course.title},
-                    "unit_amount": course.price_cents,
+    # Mostrar página de selección de método de pago
+    return render_template("enroll_payment.html", course=course, paypal_client_id=PAYPAL_CLIENT_ID)
+
+
+@app.route("/paypal/create/<int:course_id>", methods=["POST"])
+def paypal_create(course_id):
+    from flask import jsonify
+    import requests
+    
+    # Check if user is logged in
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "User not logged in"}), 401
+    
+    # Validate course exists and has a price
+    course = Course.query.get_or_404(course_id)
+    if not course.price_cents or course.price_cents <= 0:
+        return jsonify({"error": "Course is free or invalid"}), 400
+    
+    # Get PayPal access token
+    try:
+        auth_response = requests.post(
+            f"https://api-m.{'sandbox.' if PAYPAL_MODE == 'sandbox' else ''}paypal.com/v1/oauth2/token",
+            headers={
+                "Accept": "application/json",
+                "Accept-Language": "en_US",
+            },
+            data="grant_type=client_credentials",
+            auth=(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET)
+        )
+        auth_response.raise_for_status()
+        access_token = auth_response.json()["access_token"]
+        
+        # Create PayPal order
+        currency = get_setting("currency", "USD")
+        order_data = {
+            "intent": "CAPTURE",
+            "purchase_units": [{
+                "amount": {
+                    "currency_code": currency,
+                    "value": f"{course.price_cents / 100:.2f}"
                 },
-                "quantity": 1,
+                "description": course.title
+            }],
+            "application_context": {
+                "return_url": url_for("paypal_success", course_id=course_id, _external=True),
+                "cancel_url": url_for("course_detail", course_id=course_id, _external=True)
             }
-        ],
-        mode="payment",
-        success_url=url_for(
-            "enroll_success", course_id=course.id, _external=True
-        ) + "?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url=url_for("course_detail", course_id=course.id, _external=True),
-    )
-    return redirect(checkout.url)
+        }
+        
+        order_response = requests.post(
+            f"https://api-m.{'sandbox.' if PAYPAL_MODE == 'sandbox' else ''}paypal.com/v2/checkout/orders",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            },
+            json=order_data
+        )
+        order_response.raise_for_status()
+        order = order_response.json()
+        
+        return jsonify({
+            "id": order["id"],
+            "links": order["links"]
+        })
+        
+    except requests.RequestException as e:
+        return jsonify({"error": "Payment processing failed"}), 500
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+
+@app.route("/paypal/success/<int:course_id>")
+def paypal_success(course_id):
+    from flask import jsonify
+    import requests
+    
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Debes iniciar sesión para completar el pago.", "danger")
+        return redirect(url_for("user_login"))
+    
+    order_id = request.args.get("token")
+    if not order_id:
+        flash("ID de orden de PayPal no encontrado.", "danger")
+        return redirect(url_for("course_detail", course_id=course_id))
+    
+    try:
+        # Get PayPal access token
+        auth_response = requests.post(
+            f"https://api-m.{'sandbox.' if PAYPAL_MODE == 'sandbox' else ''}paypal.com/v1/oauth2/token",
+            headers={
+                "Accept": "application/json",
+                "Accept-Language": "en_US",
+            },
+            data="grant_type=client_credentials",
+            auth=(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET)
+        )
+        auth_response.raise_for_status()
+        access_token = auth_response.json()["access_token"]
+        
+        # Capture PayPal payment
+        capture_response = requests.post(
+            f"https://api-m.{'sandbox.' if PAYPAL_MODE == 'sandbox' else ''}paypal.com/v2/checkout/orders/{order_id}/capture",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            }
+        )
+        capture_response.raise_for_status()
+        capture_data = capture_response.json()
+        
+        if capture_data["status"] == "COMPLETED":
+            # Create or update enrollment
+            enrollment = Enrollment.query.filter_by(
+                user_id=user_id, course_id=course_id
+            ).first()
+            if not enrollment:
+                enrollment = Enrollment(
+                    user_id=user_id, course_id=course_id, paid=True
+                )
+                db.session.add(enrollment)
+            else:
+                enrollment.paid = True
+            db.session.commit()
+            
+            flash("¡Pago exitoso! Ya tienes acceso al curso.", "success")
+            return redirect(url_for("course_detail", course_id=course_id))
+        else:
+            flash("El pago no se completó correctamente.", "danger")
+            return redirect(url_for("course_detail", course_id=course_id))
+            
+    except requests.RequestException as e:
+        flash("Error al verificar el pago con PayPal.", "danger")
+        return redirect(url_for("course_detail", course_id=course_id))
+    except Exception as e:
+        flash("Ocurrió un error inesperado al procesar el pago.", "danger")
+        return redirect(url_for("course_detail", course_id=course_id))
 
 
 @app.route("/courses/<int:course_id>/success/")
@@ -956,12 +1433,20 @@ def certificate(course_id):
     resp = require_course_access(course)
     if resp:
         return resp
+    
+    user_id = session.get("user_id")
+    if not user_can_get_certificate(course, user_id):
+        # Redirect to payment if needed
+        if course.price_cents and course.price_cents > 0 and course.company_id is None:
+            return render_template("certificate_payment.html", course=course, paypal_client_id=PAYPAL_CLIENT_ID)
+        else:
+            abort(403)
+    
     sections = (
         CourseSection.query.filter_by(course_id=course_id)
         .order_by(CourseSection.order)
         .all()
     )
-    user_id = session.get("user_id")
     if user_id:
         completed = [
             p.section_id
@@ -1138,6 +1623,7 @@ def admin():
             prerequisites = request.form.get("prerequisites", "")
             module_count = min(int(request.form.get("module_count", 3)), 10)
             description = request.form.get("description", "").strip()
+            price_cents = int(request.form.get("price_cents", 0))
             file = request.files.get("icon")
             icon_name = None
             if file and file.filename:
@@ -1160,6 +1646,7 @@ def admin():
                 description=description or None,
                 icon=icon_name,
                 company_id=company.id if company else None,
+                price_cents=price_cents,
             )
             session.setdefault("completed_sections", {}).pop(str(course.id), None)
             session.setdefault("quiz_scores", {}).pop(str(course.id), None)
@@ -1209,8 +1696,38 @@ def admin():
             db.session.commit()
         elif action == "delete_course":
             course = Course.query.get_or_404(request.form.get("id"))
-            db.session.delete(course)
-            db.session.commit()
+            try:
+                # Delete associated data first in the correct order
+                # 1. Delete section progress (references course_section)
+                SectionProgress.query.filter(
+                    SectionProgress.section_id.in_(
+                        db.session.query(CourseSection.id).filter(CourseSection.course_id == course.id)
+                    )
+                ).delete(synchronize_session=False)
+                
+                # 2. Delete enrollments (references course)
+                Enrollment.query.filter_by(course_id=course.id).delete()
+                
+                # 3. Delete course sections (references course)
+                CourseSection.query.filter_by(course_id=course.id).delete()
+                
+                # 4. Delete quiz questions (references course)
+                QuizQuestion.query.filter_by(course_id=course.id).delete()
+                
+                # 5. Remove icon file if exists
+                if course.icon:
+                    try:
+                        os.remove(os.path.join(app.config["UPLOAD_FOLDER"], course.icon))
+                    except Exception:
+                        pass
+                
+                # 6. Finally delete the course
+                db.session.delete(course)
+                db.session.commit()
+                flash("Curso eliminado exitosamente", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error al eliminar el curso: {str(e)}", "danger")
         elif action == "update_section":
             section = CourseSection.query.get_or_404(request.form.get("id"))
             section.title = request.form.get("title")
@@ -1220,8 +1737,16 @@ def admin():
             db.session.commit()
         elif action == "delete_section":
             section = CourseSection.query.get_or_404(request.form.get("id"))
-            db.session.delete(section)
-            db.session.commit()
+            try:
+                # Delete section progress first (references course_section)
+                SectionProgress.query.filter_by(section_id=section.id).delete()
+                # Then delete the section
+                db.session.delete(section)
+                db.session.commit()
+                flash("Sección eliminada exitosamente", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error al eliminar la sección: {str(e)}", "danger")
         elif action == "update_question":
             q = QuizQuestion.query.get_or_404(request.form.get("id"))
             q.question = request.form.get("question")
@@ -1233,8 +1758,13 @@ def admin():
             db.session.commit()
         elif action == "delete_question":
             q = QuizQuestion.query.get_or_404(request.form.get("id"))
-            db.session.delete(q)
-            db.session.commit()
+            try:
+                db.session.delete(q)
+                db.session.commit()
+                flash("Pregunta eliminada exitosamente", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error al eliminar la pregunta: {str(e)}", "danger")
         elif action == "generate_questions":
             course = Course.query.get_or_404(request.form.get("id"))
             QuizQuestion.query.filter_by(course_id=course.id).delete()
@@ -1268,29 +1798,93 @@ def admin():
             db.session.commit()
         elif action == "delete_news":
             item = NewsItem.query.get_or_404(request.form.get("id"))
-            db.session.delete(item)
-            db.session.commit()
+            try:
+                db.session.delete(item)
+                db.session.commit()
+                flash("Noticia eliminada exitosamente", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error al eliminar la noticia: {str(e)}", "danger")
         elif action == "clear_ai_content":
-            BlogPost.query.delete()
-            NewsItem.query.delete()
-            for course in Course.query.all():
-                db.session.delete(course)
-            db.session.commit()
-            # Remove any stored progress when wiping generated content
-            SectionProgress.query.delete()
-            db.session.commit()
-            session.pop("completed_sections", None)
-            session.pop("quiz_scores", None)
-            session.pop("quiz_passed", None)
-            session.modified = True
+            try:
+                # Delete all AI-generated content in the correct order to avoid foreign key constraints
+                
+                # 1. Clear session data first
+                session.pop("completed_sections", None)
+                session.pop("quiz_scores", None)
+                session.pop("quiz_passed", None)
+                session.modified = True
+                
+                # 2. Delete all section progress (references course_section)
+                SectionProgress.query.delete()
+                
+                # 3. Delete all enrollments (references course)
+                Enrollment.query.delete()
+                
+                # 4. Delete all quiz questions (references course)
+                QuizQuestion.query.delete()
+                
+                # 5. Delete all course sections (references course)
+                CourseSection.query.delete()
+                
+                # 6. Remove all course icon files
+                for course in Course.query.all():
+                    if course.icon:
+                        try:
+                            os.remove(os.path.join(app.config["UPLOAD_FOLDER"], course.icon))
+                        except Exception:
+                            pass
+                
+                # 7. Delete all courses
+                Course.query.delete()
+                
+                # 8. Delete all blog posts and news items
+                BlogPost.query.delete()
+                NewsItem.query.delete()
+                
+                db.session.commit()
+                flash("Todo el contenido generado por IA ha sido eliminado exitosamente", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error al eliminar el contenido: {str(e)}", "danger")
         elif action == "update_settings":
             set_setting("site_topic", request.form.get("site_topic", "").strip())
             set_setting("news_api_url", request.form.get("news_api_url", "").strip())
+            set_setting("currency", request.form.get("currency", "USD").strip())
         elif action == "update_ftp":
             set_setting("hostgator_host", request.form.get("hostgator_host", "").strip())
             set_setting("hostgator_username", request.form.get("hostgator_username", "").strip())
             set_setting("hostgator_password", request.form.get("hostgator_password", "").strip())
             set_setting("hostgator_path", request.form.get("hostgator_path", "").strip())
+        elif action == "create_company":
+            company_name = request.form.get("company_name", "").strip()
+            admin_email = request.form.get("admin_email", "").strip()
+            admin_password = request.form.get("admin_password", "").strip()
+            
+            if company_name and admin_email and admin_password:
+                if not Company.query.filter_by(name=company_name).first():
+                    if not User.query.filter_by(email=admin_email).first():
+                        # Create company
+                        company = Company(name=company_name)
+                        db.session.add(company)
+                        db.session.commit()
+                        
+                        # Create company admin
+                        admin_user = User(
+                            email=admin_email,
+                            password_hash=generate_password_hash(admin_password),
+                            company_id=company.id,
+                            is_company_admin=True
+                        )
+                        db.session.add(admin_user)
+                        db.session.commit()
+                        flash(f"Empresa '{company_name}' y administrador creados exitosamente", "success")
+                    else:
+                        flash("El correo del administrador ya está en uso", "danger")
+                else:
+                    flash("Ya existe una empresa con ese nombre", "danger")
+            else:
+                flash("Todos los campos son obligatorios", "danger")
         elif action == "upload_image":
             slug = secure_filename(request.form.get("slug", ""))
             allowed = [p.slug for p in Page.query.all()] + ["hero"]
@@ -1322,6 +1916,7 @@ def admin():
     last_fetch = get_setting("last_news_fetch")
     site_topic = get_setting("site_topic", "recursos humanos")
     news_api_url = get_setting("news_api_url", get_news_api_url())
+    currency = get_setting("currency", "USD")
     hostgator_host = get_setting("hostgator_host", "")
     hostgator_username = get_setting("hostgator_username", "")
     hostgator_password = get_setting("hostgator_password", "")
@@ -1335,6 +1930,7 @@ def admin():
         last_news_fetch=last_fetch,
         site_topic=site_topic,
         news_api_url=news_api_url,
+        currency=currency,
         hostgator_host=hostgator_host,
         hostgator_username=hostgator_username,
         hostgator_password=hostgator_password,
@@ -1418,5 +2014,21 @@ def delete_hostgator_route():
 
 if __name__ == "__main__":
     with app.app_context():
-        create_tables()
+        try:
+            create_tables()
+            # Create test course for PayPal
+            title = "Liderazgo y Gestión de Equipos (Test PayPal)"
+            if not Course.query.filter_by(title=title).first():
+                create_course(
+                    title,
+                    module_count=3,
+                    difficulty="Intermedio",
+                    prerequisites="Ninguno",
+                    description="Curso de prueba para integración con PayPal.",
+                    price_cents=9900,  # $99.00 MXN/USD (ajustar según moneda)
+                )
+            print("Database initialization completed successfully")
+        except Exception as e:
+            print(f"Warning: Database initialization failed: {e}")
+            print("The app will continue to run, but some features may not work properly")
     app.run(debug=True)

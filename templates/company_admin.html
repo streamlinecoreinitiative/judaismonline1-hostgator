@@ -1,57 +1,138 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1 class="mb-4">Administrador de Empresa</h1>
-<form method="post" class="row g-3 mb-4">
-  <input type="hidden" name="action" value="assign">
-  <div class="col-md-4">
-    <label class="form-label">Usuario</label>
-    <select class="form-select" name="user_id">
-      {% for u in users %}
-      <option value="{{ u.id }}">{{ u.email }}</option>
-      {% endfor %}
-    </select>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- Asignar curso -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5><i class="fas fa-plus"></i> Asignar Curso</h5>
   </div>
-  <div class="col-md-4">
-    <label class="form-label">Curso</label>
-    <select class="form-select" name="course_id">
-      {% for c in courses %}
-      <option value="{{ c.id }}">{{ c.title }}</option>
-      {% endfor %}
-    </select>
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      <input type="hidden" name="action" value="assign">
+      <div class="col-md-4">
+        <label class="form-label">Usuario</label>
+        <select class="form-select" name="user_id" required>
+          <option value="">Seleccionar usuario...</option>
+          {% for u in users %}
+          <option value="{{ u.id }}">{{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Curso</label>
+        <select class="form-select" name="course_id" required>
+          <option value="">Seleccionar curso...</option>
+          {% for c in courses %}
+          <option value="{{ c.id }}">{{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="is_mandatory" required>
+          <option value="1">Obligatorio</option>
+          <option value="0">Opcional</option>
+        </select>
+      </div>
+      <div class="col-md-2 align-self-end">
+        <button class="btn btn-primary w-100" type="submit">
+          <i class="fas fa-plus"></i> Asignar
+        </button>
+      </div>
+    </form>
   </div>
-  <div class="col-md-4 align-self-end">
-    <button class="btn btn-primary" type="submit">Asignar</button>
+</div>
+
+<!-- Desasignar curso -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5><i class="fas fa-minus"></i> Desasignar Curso</h5>
   </div>
-</form>
-<form method="post" class="row g-3 mb-4">
-  <input type="hidden" name="action" value="unassign">
-  <div class="col-md-4">
-    <label class="form-label">Usuario</label>
-    <select class="form-select" name="user_id">
-      {% for u in users %}
-      <option value="{{ u.id }}">{{ u.email }}</option>
-      {% endfor %}
-    </select>
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      <input type="hidden" name="action" value="unassign">
+      <div class="col-md-5">
+        <label class="form-label">Usuario</label>
+        <select class="form-select" name="user_id" required>
+          <option value="">Seleccionar usuario...</option>
+          {% for u in users %}
+          <option value="{{ u.id }}">{{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">Curso</label>
+        <select class="form-select" name="course_id" required>
+          <option value="">Seleccionar curso...</option>
+          {% for c in courses %}
+          <option value="{{ c.id }}">{{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 align-self-end">
+        <button class="btn btn-danger w-100" type="submit">
+          <i class="fas fa-minus"></i> Desasignar
+        </button>
+      </div>
+    </form>
   </div>
-  <div class="col-md-4">
-    <label class="form-label">Curso</label>
-    <select class="form-select" name="course_id">
-      {% for c in courses %}
-      <option value="{{ c.id }}">{{ c.title }}</option>
-      {% endfor %}
-    </select>
+</div>
+
+<!-- Asignaciones actuales -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="fas fa-list"></i> Asignaciones Actuales</h5>
   </div>
-  <div class="col-md-4 align-self-end">
-    <button class="btn btn-secondary" type="submit">Desasignar</button>
+  <div class="card-body">
+    {% if enrollments %}
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Curso</th>
+              <th>Tipo</th>
+              <th>Asignado por</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in enrollments %}
+            <tr>
+              <td>{{ e.user.email }}</td>
+              <td>{{ e.course.title }}</td>
+              <td>
+                {% if e.is_mandatory %}
+                  <span class="badge bg-danger">Obligatorio</span>
+                {% else %}
+                  <span class="badge bg-info">Opcional</span>
+                {% endif %}
+              </td>
+              <td>{{ e.assigner.email if e.assigner else "N/A" }}</td>
+              <td>{{ e.assigned_at.strftime('%d/%m/%Y') if e.assigned_at else "N/A" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center">
+        <p class="text-muted">Aún no hay asignaciones de cursos.</p>
+      </div>
+    {% endif %}
   </div>
-</form>
-<h2>Asignaciones Actuales</h2>
-<ul>
-  {% for e in enrollments %}
-  <li>{{ e.user.email }} - {{ e.course.title }}</li>
-  {% else %}
-  <li>Aún no hay asignaciones.</li>
-{% endfor %}
-</ul>
+</div>
 {% endblock %}
 

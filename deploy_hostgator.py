@@ -98,6 +98,101 @@ def upload_file(ftp, local_path, remote_path):
         return False
 
 
+def list_remote_files(ftp, remote_path, base_path=""):
+    """Recursively list all files on the remote FTP server."""
+    remote_files = []
+    try:
+        ftp.cwd(remote_path)
+        items = []
+        ftp.retrlines('LIST', items.append)
+        
+        for item in items:
+            # Parse FTP LIST output (simplified)
+            parts = item.split()
+            if len(parts) >= 9:
+                permissions = parts[0]
+                filename = ' '.join(parts[8:])
+                
+                # Skip . and .. directories
+                if filename in ['.', '..']:
+                    continue
+                
+                relative_path = f"{base_path}/{filename}" if base_path else filename
+                full_remote_path = f"{remote_path}/{filename}"
+                
+                if permissions.startswith('d'):  # Directory
+                    # Recursively list directory contents
+                    sub_files = list_remote_files(ftp, full_remote_path, relative_path)
+                    remote_files.extend(sub_files)
+                else:  # File
+                    remote_files.append(relative_path)
+        
+        return remote_files
+    except Exception as e:
+        print(f"⚠️ Warning: Could not list remote directory {remote_path}: {e}")
+        return []
+
+
+def delete_remote_file(ftp, remote_path):
+    """Delete a file from the remote FTP server."""
+    try:
+        ftp.delete(remote_path)
+        print(f"🗑️ Deleted remote file: {remote_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to delete remote file {remote_path}: {e}")
+        return False
+
+
+def delete_empty_remote_directories(ftp, remote_base):
+    """Delete empty directories from the remote server."""
+    try:
+        def try_delete_dir(dir_path):
+            try:
+                ftp.rmd(dir_path)
+                print(f"🗑️ Deleted empty remote directory: {dir_path}")
+                return True
+            except Exception:
+                return False
+        
+        # Get all directories and try to delete them (starting from deepest)
+        ftp.cwd(remote_base)
+        dirs_to_check = []
+        
+        def collect_dirs(path, base=""):
+            try:
+                ftp.cwd(path)
+                items = []
+                ftp.retrlines('LIST', items.append)
+                
+                for item in items:
+                    parts = item.split()
+                    if len(parts) >= 9:
+                        permissions = parts[0]
+                        filename = ' '.join(parts[8:])
+                        
+                        if filename in ['.', '..']:
+                            continue
+                        
+                        if permissions.startswith('d'):
+                            dir_path = f"{base}/{filename}" if base else filename
+                            full_path = f"{path}/{filename}"
+                            dirs_to_check.append(full_path)
+                            collect_dirs(full_path, dir_path)
+            except Exception:
+                pass
+        
+        collect_dirs(remote_base)
+        
+        # Sort by depth (deepest first) and try to delete
+        dirs_to_check.sort(key=lambda x: x.count('/'), reverse=True)
+        for dir_path in dirs_to_check:
+            try_delete_dir(dir_path)
+            
+    except Exception as e:
+        print(f"⚠️ Warning during directory cleanup: {e}")
+
+
 def deploy_optimized():
     """Main deployment function with optimization."""
     # Generate static site by running update_site.py
@@ -166,12 +261,54 @@ def deploy_optimized():
             ftp.login(user=ftp_user, passwd=ftp_pass)
             print("✅ Connected successfully")
             
+            # Get list of remote files for deletion comparison
+            print("🔍 Scanning remote files for cleanup...")
+            remote_files = list_remote_files(ftp, remote_base)
+            
+            # Determine which remote files should be deleted
+            files_to_delete = []
+            local_relative_files = set()
+            
+            # Build set of all local files (relative to docs/)
+            for root, dirs, files in os.walk(local_dir):
+                for filename in files:
+                    local_path = os.path.join(root, filename)
+                    relative_path = os.path.relpath(local_path, local_dir)
+                    local_relative_files.add(relative_path.replace(os.sep, '/'))
+            
+            # Find remote files that don't exist locally
+            for remote_file in remote_files:
+                if remote_file not in local_relative_files:
+                    remote_file_path = f"{remote_base}/{remote_file}"
+                    files_to_delete.append(remote_file_path)
+            
+            # Delete obsolete remote files
+            if files_to_delete:
+                print(f"🗑️ Found {len(files_to_delete)} files to delete from server:")
+                deleted_count = 0
+                for remote_file_path in files_to_delete:
+                    print(f"🗑️ Deleting: {remote_file_path}")
+                    if delete_remote_file(ftp, remote_file_path):
+                        deleted_count += 1
+                
+                print(f"🧹 Deleted {deleted_count}/{len(files_to_delete)} remote files")
+                
+                # Clean up empty directories
+                print("🧹 Cleaning up empty directories...")
+                delete_empty_remote_directories(ftp, remote_base)
+            else:
+                print("✨ No remote files need deletion")
+            
+            # Upload new/changed files
             uploaded_count = 0
             for local_path, remote_path in files_to_upload:
                 if upload_file(ftp, local_path, remote_path):
                     uploaded_count += 1
             
-            print(f"🎉 Upload complete! {uploaded_count}/{len(files_to_upload)} files uploaded successfully")
+            print(f"🎉 Deployment complete!")
+            print(f"📤 Uploaded: {uploaded_count}/{len(files_to_upload)} files")
+            if files_to_delete:
+                print(f"🗑️ Deleted: {deleted_count}/{len(files_to_delete)} obsolete files")
             
             # Save updated hashes only if upload was successful
             save_file_hashes(new_hashes)

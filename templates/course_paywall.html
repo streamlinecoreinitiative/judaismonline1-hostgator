@@ -9,7 +9,9 @@
   <div class="card-body">
     <h1 class="card-title">{{ course.title }}</h1>
     <p class="card-text">{{ course.description|markdown|safe }}</p>
-    <p class="card-text"><strong>Precio:</strong> ${{ '%.2f'|format(course.price_cents / 100) }}</p>
+    {% if course.price_cents and course.price_cents > 0 %}
+    <p class="card-text"><strong>Precio:</strong> {{ format_price(course.price_cents) }}</p>
+    {% endif %}
     {% if not current_user %}
     <p><a href="{{ url_for('user_login') }}">Iniciar sesión</a> o <a href="{{ url_for('register') }}">registrarse</a> para comprar este curso.</p>
     {% else %}
